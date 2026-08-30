@@ -173,9 +173,12 @@ export default function EasterEggs() {
     return () => window.removeEventListener("theme:toggle", onToggle);
   }, []);
 
-  // ── Mobile: gwapo — tap the hero title "Robb Olazo" 4x quickly (no keyboard) — hero is now pointer-events-auto
+  // ── Mobile: gwapo — tap the hero title "Robb Olazo" 4x quickly (no keyboard) — disabled on desktop
   useEffect(() => {
     const onTap = (e) => {
+      // desktop: disabled — only mobile/touch devices
+      if (window.matchMedia("(min-width: 768px)").matches) return;
+      if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
       // accept any tap on the hero section (#top) so it's forgiving; h1 is the main target
       const target = e.target.closest?.("#top h1") || e.target.closest?.("#top");
       if (!target) return;
@@ -256,9 +259,12 @@ export default function EasterEggs() {
     };
   }, []);
 
-  // ── Mobile: hacker alternative — tap the nav logo 5x quickly ──
+  // ── Mobile: hacker alternative — tap the nav logo 5x quickly — disabled on desktop ──
   useEffect(() => {
     const onLogoTap = (e) => {
+      // desktop: disabled — only mobile/touch devices
+      if (window.matchMedia("(min-width: 768px)").matches) return;
+      if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
       const target = e.target.closest?.('header a[href="#top"], header a[aria-label*="Home"]');
       if (!target) return;
       const now = performance.now();

@@ -74,16 +74,16 @@ export default function Hero({ className = "" }) {
           <span className="w-2 h-2 rounded-full bg-ink dot-pulse" />
         </div>
 
-        {/* Display Headline — DM Serif Display, italic first name — mobile gwapo tap target */}
+        {/* Display Headline — DM Serif Display, italic first name — mobile gwapo tap target (disabled on desktop) */}
         <h1
           data-reveal
-          className="reveal leading-[0.88] max-w-full text-ink pointer-events-auto cursor-pointer select-none"
+          className={`reveal leading-[0.88] max-w-full text-ink pointer-events-auto select-none ${isMobile ? "cursor-pointer" : "cursor-default"}`}
           style={{
             fontSize: "clamp(3.75rem, 18vw, 10.5rem)",
             fontFamily: "'DM Serif Display', serif",
             letterSpacing: "-0.01em",
           }}
-          title="Tap 5× quickly — mobile easter egg"
+          title={isMobile ? "Tap 5× quickly — mobile easter egg" : undefined}
         >
           <span className="block font-serif not-italic pointer-events-none">Robb</span>
           <span className="block font-serif italic pointer-events-none">Olazo</span>
