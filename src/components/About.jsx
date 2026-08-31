@@ -142,7 +142,11 @@ export default function About({ isDark }) {
                       key={photoSrc}
                       src={photoSrc}
                       alt="Robb Olazo"
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover select-none"
+                      style={{ WebkitUserDrag: "none", WebkitTouchCallout: "none" }}
+                      draggable={false}
+                      onDragStart={(e) => e.preventDefault()}
+                      onContextMenu={(e) => e.preventDefault()}
                       onError={(e) => { e.currentTarget.style.display = "none"; }}
                     />
                     {/* Placeholder shown when image is missing */}

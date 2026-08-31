@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { ArrowUpRight, Sun, Moon } from "lucide-react";
-import ScrambleText from "./ScrambleText";
 
 const LINKS = [
   { href: "#about", label: "About" },
@@ -10,7 +9,7 @@ const LINKS = [
   { href: "#contact", label: "Contact" },
 ];
 
-export default function Nav({ isDark, toggleTheme }) {
+export default function Nav({ isDark, toggleTheme, isToggling }) {
   const [scrolled, setScrolled] = useState(false);
   const [active, setActive] = useState("");
   const [isHacker, setIsHacker] = useState(
@@ -163,7 +162,11 @@ export default function Nav({ isDark, toggleTheme }) {
             <img
               src={isDark || isHacker ? "/logo-light.svg" : "/logo-dark.svg"}
               alt="Robb Olazo"
-              className={`h-6 sm:h-7 w-auto transition-all duration-300 group-hover:scale-110 group-hover:opacity-70 ${isHacker ? "hacker-logo-glitch" : ""}`}
+              className={`h-6 sm:h-7 w-auto transition-all duration-300 group-hover:scale-110 group-hover:opacity-70 select-none ${isHacker ? "hacker-logo-glitch" : ""}`}
+              style={{ WebkitUserDrag: "none", WebkitTouchCallout: "none" }}
+              draggable={false}
+              onDragStart={(e) => e.preventDefault()}
+              onContextMenu={(e) => e.preventDefault()}
             />
           </a>
         </div>
@@ -198,17 +201,22 @@ export default function Nav({ isDark, toggleTheme }) {
         <div className="justify-self-end flex items-center gap-1.5 sm:gap-3 shrink-0">
           <button
             type="button"
-            onClick={(e) => toggleTheme?.(e)}
-            className={`theme-toggle !w-8 !h-8 sm:!w-9 sm:!h-9 shrink-0 ${isDark ? "theme-dark-btn" : "theme-light-btn"}`}
+            onClick={(e) => {
+              if (isToggling) return;
+              toggleTheme?.(e);
+            }}
+            disabled={!!isToggling}
+            aria-busy={isToggling ? "true" : "false"}
+            className={`theme-toggle !w-8 !h-8 sm:!w-9 sm:!h-9 shrink-0 ${isDark ? "theme-dark-btn" : "theme-light-btn"} ${isToggling ? "pointer-events-none opacity-70" : ""}`}
             aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
             title={isDark ? "Light mode" : "Dark mode"}
           >
             <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 theme-toggle-icon sun" />
             <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4 theme-toggle-icon moon" />
           </button>
-          <a href="#contact" onClick={(e) => handleNavClick(e, "#contact")} className="nav-cta inline-flex text-[0.74rem] sm:text-[0.8125rem] px-3 sm:px-[18px] py-1.5 sm:py-2">
-            <ScrambleText text="Hire me" as="span" />
-            <ArrowUpRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+          <a href="#contact" onClick={(e) => handleNavClick(e, "#contact")} className="nav-cta group inline-flex items-center gap-1.5 text-[0.74rem] sm:text-[0.8125rem] px-4 sm:px-5 py-2 sm:py-2">
+            <span className="tracking-[-0.01em]">Hire me</span>
+            <ArrowUpRight className="hire-arrow w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-x-[2px] group-hover:-translate-y-[2px]" />
           </a>
         </div>
       </nav>

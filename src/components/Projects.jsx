@@ -212,7 +212,11 @@ function ProjectPreview({ project, isActive }) {
           <img
             src={project.image}
             alt={`${project.title} — screenshot`}
-            className="absolute inset-0 w-full h-full object-cover object-top transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03]"
+            className="absolute inset-0 w-full h-full object-cover object-top transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03] select-none"
+            style={{ WebkitUserDrag: "none", WebkitTouchCallout: "none" }}
+            draggable={false}
+            onDragStart={(e) => e.preventDefault()}
+            onContextMenu={(e) => e.preventDefault()}
             loading="lazy"
             decoding="async"
             onError={(e) => {
@@ -346,11 +350,16 @@ function ProjectMedia({ project }) {
         alt={`${project.title} — product screenshot`}
         loading="eager"
         decoding="async"
+        draggable={false}
+        onDragStart={(e) => e.preventDefault()}
+        onContextMenu={(e) => e.preventDefault()}
         onLoad={() => setLoaded(true)}
-        className="media-img w-full h-full object-cover"
+        className="media-img w-full h-full object-cover select-none"
         style={{
           opacity: loaded ? 1 : 0,
           transform: loaded ? "scale(1)" : "scale(1.035)",
+          WebkitUserDrag: "none",
+          WebkitTouchCallout: "none",
         }}
       />
     </div>

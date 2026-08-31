@@ -73,8 +73,11 @@ function ProfileAvatar({ size = 36, className = "" }) {
       src={PROFILE_SRC}
       alt="Robb Olazo"
       onError={() => setErr(true)}
-      className={`chat-avatar-img ${className}`}
-      style={{ width: size, height: size }}
+      className={`chat-avatar-img select-none ${className}`}
+      style={{ width: size, height: size, WebkitUserDrag: "none", WebkitTouchCallout: "none" }}
+      draggable={false}
+      onDragStart={(e) => e.preventDefault()}
+      onContextMenu={(e) => e.preventDefault()}
     />
   );
 }

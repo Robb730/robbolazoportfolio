@@ -14,16 +14,17 @@ import useHackerCorruption from "./hooks/useHackerCorruption";
 import Marquee from "./components/Marquee";
 import ContextMenu from "./components/ContextMenu";
 import EasterEggs from "./components/EasterEggs";
+import ImageGuard from "./components/ImageGuard";
 
 export default function App() {
   const scopeRef = useReveal();
-  const { isDark, toggleTheme } = useTheme();
+  const { isDark, toggleTheme, isToggling } = useTheme();
   useHackerCorruption();
 
   return (
     <div ref={scopeRef} className="min-h-screen bg-paper text-ink font-body">
       <FloatingOrbs />
-      <Nav isDark={isDark} toggleTheme={toggleTheme} />
+      <Nav isDark={isDark} toggleTheme={toggleTheme} isToggling={isToggling} />
       <Hero />
       <main className="relative">
         <Marquee />
@@ -37,6 +38,7 @@ export default function App() {
       <FloatingChat />
       <ContextMenu />
       <EasterEggs />
+      <ImageGuard />
     </div>
   );
 }

@@ -102,8 +102,11 @@ function CertThumb({ cert, isHovered }) {
         <img
           src={cert.image}
           alt={`${cert.title} — ${cert.issuer}`}
-          className="absolute inset-0 w-full h-full object-cover object-top transition-opacity duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
-          style={{ opacity: isHovered ? 1 : 0 }}
+          className="absolute inset-0 w-full h-full object-cover object-top transition-opacity duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] select-none"
+          style={{ opacity: isHovered ? 1 : 0, WebkitUserDrag: "none", WebkitTouchCallout: "none" }}
+          draggable={false}
+          onDragStart={(e) => e.preventDefault()}
+          onContextMenu={(e) => e.preventDefault()}
           onError={() => setErrored(true)}
           loading="lazy"
           decoding="async"

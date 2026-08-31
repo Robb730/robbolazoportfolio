@@ -253,13 +253,15 @@ button:focus-visible {
   gap: 6px;
   font-size: 0.8125rem;
   font-weight: 500;
+  letter-spacing: -0.01em;
   padding: 8px 18px;
   border-radius: 9999px;
   background: #0d0d0d;
   color: #ffffff;
+  border: 1px solid #0d0d0d;
   overflow: hidden;
   isolation: isolate;
-  transition: transform 0.25s cubic-bezier(0.34, 1.2, 0.64, 1), box-shadow 0.25s ease, opacity 0.2s ease;
+  transition: transform 0.25s cubic-bezier(0.34, 1.2, 0.64, 1), box-shadow 0.25s ease, opacity 0.2s ease, background 0.2s ease, color 0.2s ease;
   box-shadow: 0 1px 10px rgba(0, 0, 0, 0.12);
 }
 
@@ -267,7 +269,7 @@ button:focus-visible {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.18) 50%, transparent 70%);
+  background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.14) 50%, transparent 70%);
   transform: translateX(-120%);
   transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: -1;
@@ -278,12 +280,22 @@ button:focus-visible {
 }
 
 .nav-cta:hover {
-  transform: translateY(-1.5px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
 }
 
 .nav-cta:active {
   transform: translateY(0) scale(0.98);
+}
+
+.nav-cta .hire-arrow {
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-cta .hire-arrow {
+    transition: none !important;
+    transform: none !important;
+  }
 }
 
 .mobile-drawer {
@@ -365,6 +377,7 @@ button:focus-visible {
 .theme-dark .nav-cta {
   background: #ffffff;
   color: #0d0d0d;
+  border-color: #ffffff;
 }
 
 .theme-dark .nav-cta::before {
@@ -434,7 +447,7 @@ button:focus-visible {
 .theme-hacker .nav-pill-link { color: #00cc6a; border-color: transparent; }
 .theme-hacker .nav-pill-link:hover { background: rgba(0,255,136,0.14); color: #00ff88; border-color: rgba(0,255,136,0.22); box-shadow: inset 0 1px 0 rgba(0,255,136,0.18); }
 .theme-hacker .nav-pill-link.is-active { background: #00ff88; color: #010a05; box-shadow: 0 1px 14px rgba(0,255,136,0.36), inset 0 1px 0 rgba(255,255,255,0.16); }
-.theme-hacker .nav-cta { background: #00ff88; color: #010a05; box-shadow: 0 1px 12px rgba(0,255,136,0.28); }
+.theme-hacker .nav-cta { background: #00ff88; color: #010a05; border-color: #00ff88; box-shadow: 0 1px 12px rgba(0,255,136,0.28); }
 .theme-hacker .nav-cta::before { background: linear-gradient(105deg, transparent 30%, rgba(0,0,0,0.16) 50%, transparent 70%); }
 .theme-hacker .theme-toggle { background: rgba(0,255,136,0.08); border-color: rgba(0,255,136,0.20); color: #00ff88; box-shadow: inset 0 1px 0 rgba(0,255,136,0.14), 0 4px 14px rgba(0,255,136,0.12); }
 .theme-hacker .theme-toggle:hover { background: #00ff88; color: #010a05; border-color: #00ff88; }

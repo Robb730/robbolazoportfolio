@@ -22,6 +22,14 @@ import * as THREE from "three";
 
 extend({ MeshLineGeometry, MeshLineMaterial });
 
+// Preload both strap variants so spamming light/dark doesn't trigger a
+// new suspense (which would unmount Physics if wrapped together).
+try {
+  useTexture.preload?.(lightStrap);
+  useTexture.preload?.(darkStrap);
+  useTexture.preload?.(lanyard);
+} catch {}
+
 const BLANK_PIXEL =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
 
@@ -106,28 +114,27 @@ export default function Lanyard({
           gl.setClearColor(new THREE.Color(0x000000), transparent ? 0 : 1)
         }
       >
-        {/* Single Suspense INSIDE the Canvas. This MUST wrap <Physics> too,
-            because <Physics> itself suspends while the Rapier WASM loads
-            (see @react-three/rapier: suspend(importRapier, ...)). If that
-            suspension bubbled out to the outer <Suspense> in Hero, the whole
-            <Canvas> (and its renderer/world) would unmount during load, and the
-            rope joints would attach to a destroyed world — the card free-falls
-            off-screen and only a remount (e.g. a viewport resize) brings it back.
-            Wrapping everything here keeps the Canvas mounted across both the WASM
-            load and the GLB/texture load, so joints attach to the live world. */}
+        {/* Outer Suspense must wrap <Physics> because Physics itself suspends
+            while the Rapier WASM loads (suspend(importRapier)). If that
+            bubbled out to Hero's Suspense the Canvas would unmount.
+            Inner Suspense wraps only <Band> so swapping strap textures
+            (light/dark spam) suspends just the band mesh, NOT the Physics
+            world — prevents physics world destroy/recreate OOM on spam. */}
         <Suspense fallback={null}>
           <ambientLight intensity={Math.PI} />
           <Physics gravity={gravity} timeStep={1 / 60} numSolverIterations={8} numAdditionalFrictionIterations={2}>
-            <Band
-              isMobile={isMobile}
-              isHacker={isHacker}
-              isDark={isDark}
-              frontImage={frontImage}
-              backImage={backImage}
-              imageFit={imageFit}
-              lanyardImage={lanyardImage}
-              lanyardWidth={lanyardWidth}
-            />
+            <Suspense fallback={null}>
+              <Band
+                isMobile={isMobile}
+                isHacker={isHacker}
+                isDark={isDark}
+                frontImage={frontImage}
+                backImage={backImage}
+                imageFit={imageFit}
+                lanyardImage={lanyardImage}
+                lanyardWidth={lanyardWidth}
+              />
+            </Suspense>
             <Environment blur={0.6}>
               <Lightformer
                 intensity={2}
@@ -218,19 +225,32 @@ function Band({
     if (!frontImage && !backImage) return baseMap;
 
     const baseImg = baseMap?.image;
-    if (!baseImg || !baseImg.width || !baseImg.height) return baseMap;
+    // guard: image must be fully decoded — prevents texSubImage2D: bad image data
+    const baseReady =
+      baseImg &&
+      baseImg.width > 0 &&
+      baseImg.height > 0 &&
+      baseImg.complete !== false &&
+      (baseImg.naturalWidth === undefined || baseImg.naturalWidth > 0) &&
+      (baseImg.naturalHeight === undefined || baseImg.naturalHeight > 0);
+    if (!baseReady) return baseMap;
     const W = baseImg.width;
     const H = baseImg.height;
     if (!W || !H) return baseMap;
     const canvas = document.createElement("canvas");
     canvas.width = W;
     canvas.height = H;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return baseMap;
-    ctx.drawImage(baseImg, 0, 0, W, H);
+    try {
+      ctx.drawImage(baseImg, 0, 0, W, H);
+    } catch {
+      return baseMap;
+    }
 
     const drawFitted = (img, rect, scaleFactor = 0.5) => {
-      if (!img || !img.width || !img.height) return;
+      if (!img || !img.width || !img.height || img.complete === false) return;
+      if (img.naturalWidth === 0 || img.naturalHeight === 0) return;
       const rx = rect.x * W;
       const ry = rect.y * H;
       const rw = rect.w * W;
@@ -299,6 +319,10 @@ function Band({
     composite.colorSpace = THREE.SRGBColorSpace;
     composite.flipY = baseMap.flipY;
     composite.anisotropy = 8;
+    // non-POT canvas + no mipmaps avoids bad-image / incomplete-mipmap uploads
+    composite.generateMipmaps = false;
+    composite.minFilter = THREE.LinearFilter;
+    composite.magFilter = THREE.LinearFilter;
     composite.needsUpdate = true;
     return composite;
   }, [frontImage, backImage, frontTex, backTex, materials.base.map, isHacker]);
@@ -316,11 +340,21 @@ function Band({
   }, [curve]);
 
   useEffect(() => {
-    if (!texture) return;
-    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-    texture.anisotropy = 4;
-    texture.needsUpdate = true;
-  }, [texture]);
+    if (!texture?.image) return;
+    const img = texture.image;
+    const ready =
+      img.width > 0 &&
+      img.height > 0 &&
+      img.complete !== false &&
+      (img.naturalWidth === undefined || img.naturalWidth > 0);
+    if (!ready) return;
+    // only set wrap/repeat once to avoid extra uploads
+    if (texture.wrapS !== THREE.RepeatWrapping) {
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      texture.anisotropy = 4;
+      texture.needsUpdate = true;
+    }
+  }, [texture, strapSrc]);
   const [dragged, drag] = useState(false);
   const [hovered, hover] = useState(false);
 
