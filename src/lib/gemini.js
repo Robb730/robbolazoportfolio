@@ -64,3 +64,49 @@ export async function sendMessageToGemini({ message, history = [] }) {
 export function hasGeminiKey() {
   return Boolean(apiKey && apiKey.trim().length > 10);
 }
+
+function blobToBase64(blob) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => {
+      const s = String(r.result || "");
+      const comma = s.indexOf(",");
+      res(comma >= 0 ? s.slice(comma + 1) : s);
+    };
+    r.onerror = rej;
+    r.readAsDataURL(blob);
+  });
+}
+
+export async function transcribeAudioWithGemini(audioBlob) {
+  const ai = getClient();
+  const base64 = await blobToBase64(audioBlob);
+  const mime = audioBlob.type || "audio/webm";
+  // Try audio transcription with latest flash models that support audio
+  const tModels = ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash"];
+  let lastErr;
+  for (const m of tModels) {
+    try {
+      const resp = await ai.models.generateContent({
+        model: m,
+        contents: [
+          {
+            role: "user",
+            parts: [
+              { inlineData: { mimeType: mime, data: base64 } },
+              { text: "Transcribe this audio verbatim. Return only the transcript, no extra formatting or commentary." },
+            ],
+          },
+        ],
+      });
+      const t = resp.text?.trim();
+      if (t && t.length > 1 && !/^ *(no speech|empty)/i.test(t)) return t;
+      // fall through to next model if empty
+    } catch (e) {
+      lastErr = e;
+      if (/429|quota|rate/i.test(String(e?.message))) continue;
+      // don't immediately throw — try next model
+    }
+  }
+  throw lastErr || new Error("Transcription failed — try typing instead.");
+}

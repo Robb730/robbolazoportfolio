@@ -23,11 +23,15 @@ export default function Nav({ isDark, toggleTheme, isToggling, onTransition }) {
   const [scrolled, setScrolled] = useState(false);
   const [active, setActive] = useState("");
   const [isHacker, setIsHacker] = useState(
-    () => typeof document !== "undefined" && document.documentElement.classList.contains("theme-hacker")
+    () =>
+      typeof document !== "undefined" &&
+      document.documentElement.classList.contains("theme-hacker"),
   );
   useEffect(() => {
     const el = document.documentElement;
-    const obs = new MutationObserver(() => setIsHacker(el.classList.contains("theme-hacker")));
+    const obs = new MutationObserver(() =>
+      setIsHacker(el.classList.contains("theme-hacker")),
+    );
     obs.observe(el, { attributes: true, attributeFilter: ["class"] });
     return () => obs.disconnect();
   }, []);
@@ -37,6 +41,22 @@ export default function Nav({ isDark, toggleTheme, isToggling, onTransition }) {
   // Map of href -> the actual <a> DOM node, so we can scroll the active
   // one into view inside the horizontally-scrollable pill on mobile.
   const linkRefs = useRef({});
+  const highlightRef = useRef(null); // NEW
+
+  const moveHighlight = (href) => {
+    const container = pillRef.current;
+    const el = linkRefs.current[href];
+    const highlight = highlightRef.current;
+    if (!container || !el || !highlight) return;
+    const cRect = container.getBoundingClientRect();
+    const eRect = el.getBoundingClientRect();
+    highlight.style.opacity = "1";
+    highlight.style.width = `${eRect.width}px`;
+    highlight.style.transform = `translateX(${eRect.left - cRect.left}px)`;
+  };
+  const hideHighlight = () => {
+    if (highlightRef.current) highlightRef.current.style.opacity = "0";
+  };
 
   const handleNavClick = (e, href) => {
     e.preventDefault();
@@ -127,7 +147,10 @@ export default function Nav({ isDark, toggleTheme, isToggling, onTransition }) {
       if (e.defaultPrevented) return;
       e.preventDefault();
       const headerH = headerRef.current?.offsetHeight ?? 64;
-      const top = id === "top" ? 0 : el.getBoundingClientRect().top + window.scrollY - headerH - 8;
+      const top =
+        id === "top"
+          ? 0
+          : el.getBoundingClientRect().top + window.scrollY - headerH - 8;
       window.scrollTo({ top, behavior: "smooth" });
       history.pushState(null, "", href);
     };
@@ -192,21 +215,33 @@ export default function Nav({ isDark, toggleTheme, isToggling, onTransition }) {
         <div className="justify-self-center flex items-center justify-center min-w-0 max-w-full">
           <div
             ref={pillRef}
+            onMouseLeave={hideHighlight}
             className="nav-pill flex items-center gap-1 flex-nowrap overflow-x-auto scrollbar-none max-w-[52vw] sm:max-w-none"
           >
+            <div
+              aria-hidden="true"
+              ref={highlightRef}
+              className="nav-pill-highlight"
+            />
             {LINKS.map((link) => (
               <a
                 key={link.href}
                 ref={(el) => (linkRefs.current[link.href] = el)}
                 href={link.href}
                 onClick={(e) => handleNavClick(e, link.href)}
+                onMouseEnter={() => moveHighlight(link.href)}
+                onFocus={() => moveHighlight(link.href)}
                 className={`nav-pill-link whitespace-nowrap shrink-0 text-[0.74rem] sm:text-[0.8125rem] px-2.5 sm:px-3.5 py-1.5 sm:py-[6px] ${active === link.href ? "is-active" : ""}`}
               >
                 <span className="sm:hidden">
-                  {link.label === "Certificates and Awards" ? "Awards" : link.label}
+                  {link.label === "Certificates and Awards"
+                    ? "Awards"
+                    : link.label}
                 </span>
                 <span className="hidden sm:inline lg:hidden">
-                  {link.label === "Certificates and Awards" ? "Certificates" : link.label}
+                  {link.label === "Certificates and Awards"
+                    ? "Certificates"
+                    : link.label}
                 </span>
                 <span className="hidden lg:inline">{link.label}</span>
               </a>
@@ -231,7 +266,11 @@ export default function Nav({ isDark, toggleTheme, isToggling, onTransition }) {
             <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 theme-toggle-icon sun" />
             <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4 theme-toggle-icon moon" />
           </button>
-          <a href="#contact" onClick={(e) => handleNavClick(e, "#contact")} className="nav-cta group inline-flex items-center gap-1.5 text-[0.74rem] sm:text-[0.8125rem] px-4 sm:px-5 py-2 sm:py-2">
+          <a
+            href="#contact"
+            onClick={(e) => handleNavClick(e, "#contact")}
+            className="nav-cta group inline-flex items-center gap-1.5 text-[0.74rem] sm:text-[0.8125rem] px-4 sm:px-5 py-2 sm:py-2"
+          >
             <span className="tracking-[-0.01em]">Hire me</span>
             <ArrowUpRight className="hire-arrow w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-x-[2px] group-hover:-translate-y-[2px]" />
           </a>

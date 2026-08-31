@@ -113,6 +113,12 @@ export default function About({ isDark }) {
         .about-spec-card.asc-active span {
           color: rgba(255,255,255,0.45);
         }
+        .about-spec-card.asc-active p {
+          color: var(--color-paper);
+        }
+        .theme-dark .about-spec-card.asc-active span {
+          color: rgba(13,13,13,0.55);
+        }
         .trait-row {
           display: flex;
           align-items: baseline;

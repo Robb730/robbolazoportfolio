@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { MessageCircle, X, Send, Sparkles, Mic, MicOff, Volume2, VolumeX, PhoneOff } from "lucide-react";
 import { sendMessageToGemini, hasGeminiKey } from "../lib/gemini";
-import { hasElevenKey, speakWithElevenLabs, stopSpeaking } from "../lib/elevenlabs";
+import { hasElevenKey, speakWithElevenLabs, stopSpeaking, primeAudioForIOS } from "../lib/elevenlabs";
+import { getSttSupport, hasWebSpeech, getSupportedAudioMime, isIOS, isSecureContext } from "../lib/mediaStt";
+import { transcribeAudioWithGemini } from "../lib/gemini";
 
 const QUICK_REPLIES = [
   "What are your skills?",
@@ -106,61 +108,139 @@ export default function FloatingChat() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [interim, setInterim] = useState("");
   const [voiceError, setVoiceError] = useState(null);
-  const [voiceSupported, setVoiceSupported] = useState(false);
   const [pendingPlay, setPendingPlay] = useState(null); // { audio, text } for iOS autoplay-blocked TTS
   const recognitionRef = useRef(null);
   const abortRef = useRef(null);
   const idleVideoRef = useRef(null);
   const talkingVideoRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const mediaChunksRef = useRef([]);
 
-  // iOS Safari blocks audio.play() that isn't directly inside a user gesture.
-  // Our TTS play happens after an async Gemini fetch, so it gets blocked.
-  // Prime the audio stack on the first user tap so later play() is allowed.
-  const unlockAudioForIOS = useCallback(async () => {
-    try {
-      // resume WebAudio if suspended
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (AC) {
-        const ctx = new AC();
-        if (ctx.state === "suspended") await ctx.resume();
-        // close the throwaway context — we just needed the resume gesture
-        try { await ctx.close(); } catch {}
-      }
-    } catch {}
-    try {
-      const a = new Audio();
-      // tiny silent wav — plays instantly and unlocks the media element pipeline
-      a.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
-      a.muted = true;
-      await a.play().catch(() => {});
-      a.pause();
-    } catch {}
+  // iOS Safari blocks any audible play() that isn't directly inside the
+  // user gesture tick. Our TTS play happens after async Gemini+ElevenLabs
+  // fetches, so the gesture is lost. Delegate to the persistent unlock
+  // helper in elevenlabs.js — it keeps one AudioContext + one HTMLAudio
+  // element "blessed" and reuses them, plus WebAudio decoding avoids needing
+  // a fresh gesture at all.
+  const unlockAudioForIOS = useCallback(() => {
+    try { primeAudioForIOS(); } catch {}
   }, []);
 
   const hasKey = hasGeminiKey();
   const hasVoiceKey = hasElevenKey();
+  // Unified STT/TTS support — TTS only needs the ElevenLabs key, STT uses hybrid Web Speech → MediaRecorder fallback
+  const sttInfo = getSttSupport({ hasVoiceKey });
+  const ttsSupported = sttInfo.ttsSupported;
+  const webSpeechAvailable = sttInfo.webSpeech;
+  // voiceSupported now means "STT available in any form" to keep mic enabled universally
+  const voiceSupported = sttInfo.sttSupported;
+  // keep legacy name for minimal diff but derive from unified helper
+  const canUseWebSpeech = webSpeechAvailable;
+  const isIOSDevice = sttInfo.ios;
+  const isSecure = sttInfo.secure;
 
+  // iOS needs a user gesture to bless audio. Prime on the very first
+  // touch/click anywhere, plus on open/mode switches, so later TTS can
+  // autoplay even after async fetch gap.
   useEffect(() => {
-    const SR = typeof window !== "undefined" ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
-    setVoiceSupported(Boolean(SR && hasVoiceKey));
-  }, [hasVoiceKey]);
+    const prime = () => { try { primeAudioForIOS(); } catch {} };
+    const opts = { passive: true, capture: true };
+    window.addEventListener("touchend", prime, opts);
+    window.addEventListener("click", prime, opts);
+    window.addEventListener("touchstart", prime, opts);
+    return () => {
+      window.removeEventListener("touchend", prime, opts);
+      window.removeEventListener("click", prime, opts);
+      window.removeEventListener("touchstart", prime, opts);
+    };
+  }, []);
+  useEffect(() => {
+    if (open) try { primeAudioForIOS(); } catch {}
+  }, [open, mode]);
 
   // keep videos in sync with speaking — switch instantly for snappy response
+  // iOS Safari will not autoplay un-muted video, but these are muted + playsInline
+  // so they *should* autoplay — however if play() is called before metadata
+  // is loaded it rejects and the video stays frozen on first frame. We kick
+  // both videos aggressively on open/mode change and on canplay, and swap
+  // with sync'd currentTime.
+  useEffect(() => {
+    if (!open || mode !== "voice") return;
+    const idle = idleVideoRef.current;
+    const talking = talkingVideoRef.current;
+    if (!idle || !talking) return;
+    const kick = (v) => {
+      try {
+        v.muted = true;
+        v.playsInline = true;
+        v.setAttribute("playsinline", "");
+        v.setAttribute("webkit-playsinline", "");
+        v.setAttribute("x5-playsinline", "");
+        const p = v.play();
+        if (p && p.catch) p.catch(() => {});
+      } catch {}
+    };
+    // kick both so they are_decoded; browsers coalesce if already playing
+    kick(idle);
+    kick(talking);
+    const t = setTimeout(() => {
+      kick(idle);
+      kick(talking);
+    }, 250);
+    // also kick on canplay/metadata
+    const onCanPlayIdle = () => kick(idle);
+    const onCanPlayTalking = () => kick(talking);
+    idle.addEventListener("canplay", onCanPlayIdle);
+    talking.addEventListener("canplay", onCanPlayTalking);
+    idle.addEventListener("loadeddata", onCanPlayIdle);
+    talking.addEventListener("loadeddata", onCanPlayTalking);
+    // tap anywhere in voice mode also kicks (covers initial gesture requirement on some iOS builds)
+    const onPrime = () => { kick(idle); kick(talking); };
+    window.addEventListener("touchend", onPrime, { passive: true });
+    window.addEventListener("click", onPrime, { passive: true });
+    return () => {
+      clearTimeout(t);
+      idle.removeEventListener("canplay", onCanPlayIdle);
+      talking.removeEventListener("canplay", onCanPlayTalking);
+      idle.removeEventListener("loadeddata", onCanPlayIdle);
+      talking.removeEventListener("loadeddata", onCanPlayTalking);
+      window.removeEventListener("touchend", onPrime);
+      window.removeEventListener("click", onPrime);
+    };
+  }, [open, mode]);
+
   useEffect(() => {
     const idle = idleVideoRef.current;
     const talking = talkingVideoRef.current;
     if (!idle || !talking) return;
-    // ensure both are ready and autoplay allowed
-    const ensurePlay = (v) => { try { v.muted = true; v.play().catch(() => {}); } catch {} };
+    const ensurePlay = (v) => {
+      try {
+        v.muted = true;
+        v.playsInline = true;
+        v.setAttribute("playsinline", "");
+        v.setAttribute("webkit-playsinline", "");
+        const p = v.play();
+        if (p && p.catch) p.catch(() => {});
+      } catch {}
+    };
+    const syncTime = (from, to) => {
+      try {
+        const d = to.duration;
+        const cur = from.currentTime;
+        if (Number.isFinite(d) && d > 0.5 && Number.isFinite(cur)) {
+          to.currentTime = cur % d;
+        }
+      } catch {}
+    };
     if (isSpeaking || loading) {
-      // show talking right away when thinking/speaking — feels immediate
-      try { talking.currentTime = idle.currentTime % (talking.duration || 999); } catch {}
+      syncTime(idle, talking);
       ensurePlay(talking);
-      idle.pause();
+      // pause idle *after* talking has started to avoid flash of frozen frame
+      try { idle.pause(); } catch {}
     } else {
-      try { idle.currentTime = talking.currentTime % (idle.duration || 999); } catch {}
+      syncTime(talking, idle);
       ensurePlay(idle);
-      talking.pause();
+      try { talking.pause(); } catch {}
     }
   }, [isSpeaking, loading]);
 
@@ -261,6 +341,9 @@ export default function FloatingChat() {
   useEffect(() => { loadingRef.current = loading; }, [loading]);
 
   const handleSend = useCallback(async (textOverride, opts = {}) => {
+    // Prime iOS audio stack SYNCHRONOUSLY while still in the user gesture tick
+    // (must run before any await/yield, otherwise Safari loses the gesture)
+    try { primeAudioForIOS(); } catch {}
     const curLoading = loadingRef.current;
     const raw = (textOverride ?? input).trim();
     if (!raw || curLoading) {
@@ -310,13 +393,14 @@ export default function FloatingChat() {
           if (e?.name === "AbortError") { setIsSpeaking(false); setPendingPlay(null); }
           else if (e?.isAutoplayBlocked || e?.name === "NotAllowedError" || /not allowed|user agent/i.test(String(e?.message || ""))) {
             console.warn("[voice] iOS autoplay blocked, need tap to play", e);
-            // keep audio for manual tap — don't clear talking state entirely, show tap button
+            // keep audio/blob for manual tap — don't clear talking state entirely, show tap button
             setIsSpeaking(false);
-            if (e.audio) {
-              // wire up manual play: tapping will resume talking animation + play
-              const audio = e.audio;
-              audio.onended = () => { setIsSpeaking(false); setPendingPlay(null); try { URL.revokeObjectURL(e.url); } catch {} };
-              setPendingPlay({ audio, url: e.url, text: reply });
+            if (e.audio || e.blob || e.url) {
+              if (e.audio) {
+                const audio = e.audio;
+                audio.onended = () => { setIsSpeaking(false); setPendingPlay(null); try { URL.revokeObjectURL(e.url); } catch {} };
+              }
+              setPendingPlay({ audio: e.audio || null, blob: e.blob || null, url: e.url || null, text: reply });
               setVoiceError("Tap ▶ Play to hear reply — iPhone blocked autoplay");
             } else {
               setVoiceError("Tap ▶ Play — iPhone requires a tap to play audio");
@@ -359,7 +443,8 @@ export default function FloatingChat() {
         } catch (e) {
           if (e?.isAutoplayBlocked || e?.name === "NotAllowedError" || /not allowed|user agent/i.test(String(e?.message || ""))) {
             setIsSpeaking(false);
-            if (e.audio) setPendingPlay({ audio: e.audio, url: e.url, text: msg });
+            if (e.audio || e.blob || e.url) setPendingPlay({ audio: e.audio || null, blob: e.blob || null, url: e.url || null, text: msg });
+            else setPendingPlay({ text: msg });
             setVoiceError("Tap ▶ Play to hear reply — iPhone blocked autoplay");
           } else { setIsSpeaking(false); }
         }
@@ -377,102 +462,194 @@ export default function FloatingChat() {
     }
   };
 
-  const startListening = useCallback(() => {
+  const startListening = useCallback(async () => {
+    // Always prime synchronously in this gesture tick for later TTS autoplay
+    try { primeAudioForIOS(); } catch {}
     unlockAudioForIOS();
     setPendingPlay(null);
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) {
-      setVoiceError("Voice input not supported on this iPhone browser — try Safari or use the text field below. You can still tap the mic on Chrome/Edge.");
-      return;
-    }
-    if (!hasElevenKey()) {
-      setVoiceError("Missing ElevenLabs key — add VITE_ELEVENLABS_API_KEY");
-      return;
-    }
     if (loadingRef.current) {
       setVoiceError("Already thinking — wait a moment");
       return;
     }
     if (isListening) return;
-    setVoiceError(null);
-    stopSpeaking();
-    setIsSpeaking(false);
-    if (abortRef.current) { try { abortRef.current.abort(); } catch {} }
 
-    const rec = new SR();
-    rec.lang = "en-US";
-    rec.interimResults = true;
-    rec.continuous = false;
-    rec.maxAlternatives = 1;
-    recognitionRef.current = rec;
-
-    rec.onstart = () => {
-      console.log("[voice] listening start");
-      setIsListening(true);
-      setInterim("");
-    };
-    rec.onresult = (event) => {
-      let finalTranscript = "";
-      let interimTranscript = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const res = event.results[i];
-        if (res.isFinal) finalTranscript += res[0].transcript;
-        else interimTranscript += res[0].transcript;
-      }
-      console.log("[voice] result", { finalTranscript, interimTranscript, results: event.results.length });
-      if (interimTranscript) setInterim(interimTranscript);
-      if (finalTranscript) {
+    // Web Speech is the fast path — works on Safari iOS 14.5+ and desktop Chrome/Edge
+    if (hasWebSpeech()) {
+      if (isListening) return;
+      setVoiceError(null);
+      stopSpeaking();
+      setIsSpeaking(false);
+      if (abortRef.current) { try { abortRef.current.abort(); } catch {} }
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const rec = new SR();
+      rec.lang = "en-US";
+      rec.interimResults = true;
+      rec.continuous = false;
+      rec.maxAlternatives = 1;
+      recognitionRef.current = rec;
+      rec.onstart = () => {
+        console.log("[voice] listening start");
+        setIsListening(true);
         setInterim("");
-        setIsListening(false);
-        try { rec.stop(); } catch {}
-        // use ref-based handleSend so we never hit stale closure
-        handleSend(finalTranscript.trim(), { fromVoice: true });
-      }
-    };
-    rec.onerror = (e) => {
-      console.warn("speech error", e);
-      if (e.error === "not-allowed" || e.error === "permission-denied" || e.error === "service-not-allowed") {
-        setVoiceError("Microphone blocked — iPhone: Settings → Apps → Safari → Microphone → Allow. Then reload and tap mic again.");
-      } else if (e.error === "no-speech") {
-        setVoiceError("Didn't catch that — tap mic and try again, speak clearly near the mic.");
-      } else if (e.error === "audio-capture") {
-        setVoiceError("No microphone found — check that no other app is using the mic.");
-      } else if (e.error !== "aborted") {
-        setVoiceError(e.error || "Speech recognition error");
-      }
-      setIsListening(false);
-    };
-    rec.onend = () => {
-      console.log("[voice] onend, interim:", interim);
-      setIsListening(false);
-      // Fallback: if we have an interim transcript but never got a final (e.g. user paused), send it
-      // This fixes "it reads what I'm saying but never answers" when final never fires
-      setInterim((prev) => {
-        if (prev && prev.trim().length > 1 && !loadingRef.current) {
-          const t = prev.trim();
-          console.log("[voice] fallback send from interim:", t);
-          // defer so we don't call setState during render
-          setTimeout(() => handleSend(t, { fromVoice: true }), 0);
-          return "";
+      };
+      rec.onresult = (event) => {
+        let finalTranscript = "";
+        let interimTranscript = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const res = event.results[i];
+          if (res.isFinal) finalTranscript += res[0].transcript;
+          else interimTranscript += res[0].transcript;
         }
-        return prev;
-      });
-    };
-    try {
-      rec.start();
-    } catch (err) {
-      setVoiceError(err?.message || "Failed to start mic");
-      setIsListening(false);
+        console.log("[voice] result", { finalTranscript, interimTranscript, results: event.results.length });
+        if (interimTranscript) setInterim(interimTranscript);
+        if (finalTranscript) {
+          setInterim("");
+          setIsListening(false);
+          try { rec.stop(); } catch {}
+          // Prime *inside* this result gesture before the async handleSend
+          try { primeAudioForIOS(); } catch {}
+          handleSend(finalTranscript.trim(), { fromVoice: true });
+        }
+      };
+      rec.onerror = (e) => {
+        console.warn("speech error", e);
+        if (e.error === "not-allowed" || e.error === "permission-denied" || e.error === "service-not-allowed") {
+          if (isIOSDevice && !isSecure) {
+            setVoiceError("Voice needs HTTPS on iPhone — test on your deployed site. Type below and replies will still speak.");
+          } else if (isIOSDevice) {
+            setVoiceError("Microphone blocked — iPhone: Settings → Safari → Microphone → Allow. Then reload and try again.");
+          } else {
+            setVoiceError("Microphone blocked — check browser permissions and reload.");
+          }
+        } else if (e.error === "no-speech") {
+          setVoiceError("Didn't catch that — tap mic and try again, speak clearly near the mic.");
+        } else if (e.error === "audio-capture") {
+          setVoiceError("No microphone found — check that no other app is using the mic.");
+        } else if (e.error !== "aborted") {
+          setVoiceError(e.error || "Speech recognition error");
+        }
+        setIsListening(false);
+      };
+      rec.onend = () => {
+        console.log("[voice] onend, interim:", interim);
+        setIsListening(false);
+        setInterim((prev) => {
+          if (prev && prev.trim().length > 1 && !loadingRef.current) {
+            const t = prev.trim();
+            console.log("[voice] fallback send from interim:", t);
+            try { primeAudioForIOS(); } catch {}
+            setTimeout(() => handleSend(t, { fromVoice: true }), 0);
+            return "";
+          }
+          return prev;
+        });
+      };
+      try { rec.start(); } catch (err) { setVoiceError(err?.message || "Failed to start mic"); setIsListening(false); }
+      return;
     }
+
+    // Universal fallback: no Web Speech (e.g., iOS Chrome/Firefox).
+    // Use MediaRecorder + Gemini transcription so voice works in ANY browser.
+    const canMedia = Boolean(navigator.mediaDevices?.getUserMedia && window.MediaRecorder);
+    if (canMedia) {
+      if (!window.isSecureContext) {
+        setVoiceError(isIOSDevice
+          ? "Voice needs HTTPS on iPhone — test on your deployed site. You can still type below."
+          : "Voice input needs HTTPS — test on your deployed site or use localhost.");
+        setTimeout(() => document.querySelector(".voice-fallback-input")?.focus?.(), 100);
+        return;
+      }
+      setVoiceError(null);
+      stopSpeaking();
+      setIsSpeaking(false);
+      if (abortRef.current) { try { abortRef.current.abort(); } catch {} }
+      // If already recording, ignore
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") return;
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mime = getSupportedAudioMime() || undefined;
+        const mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+        mediaRecorderRef.current = mr;
+        mediaChunksRef.current = [];
+        mr.ondataavailable = (e) => { if (e.data && e.data.size > 0) mediaChunksRef.current.push(e.data); };
+        mr.onstart = () => {
+          console.log("[voice] mediaRecorder start", mime);
+          setIsListening(true);
+          setInterim("Listening…");
+        };
+        mr.onerror = (e) => {
+          console.warn("mediaRecorder error", e);
+          setVoiceError("Recording failed — try again");
+          setIsListening(false);
+          stream.getTracks().forEach((t) => t.stop());
+        };
+        mr.onstop = async () => {
+          console.log("[voice] mediaRecorder stop", mediaChunksRef.current.length);
+          setIsListening(false);
+          stream.getTracks().forEach((t) => t.stop());
+          const blob = new Blob(mediaChunksRef.current, { type: mime || "audio/webm" });
+          mediaChunksRef.current = [];
+          mediaRecorderRef.current = null;
+          if (!blob.size || blob.size < 800) {
+            setVoiceError("Didn't catch that — hold mic, speak clearly, then tap Stop.");
+            setInterim("");
+            return;
+          }
+          setInterim("Transcribing…");
+          try { primeAudioForIOS(); } catch {}
+          try {
+            const text = await transcribeAudioWithGemini(blob);
+            setInterim("");
+            const t = String(text || "").trim();
+            if (!t) { setVoiceError("Didn't catch that — try again"); return; }
+            handleSend(t, { fromVoice: true });
+          } catch (e) {
+            console.warn("transcribe failed", e);
+            const msg = String(e?.message || "");
+            if (/429|quota/i.test(msg)) setVoiceError("Transcription busy — please type instead (quota).");
+            else setVoiceError("Transcription failed — please type or try again.");
+            setInterim("");
+          }
+        };
+        mr.start();
+        return;
+      } catch (err) {
+        const msg = String(err?.message || err);
+        if (/NotAllowed|Permission|not-allowed/i.test(msg)) {
+          setVoiceError(isIOSDevice
+            ? "Microphone blocked — iPhone: Settings → Safari → Microphone → Allow. Then reload and try again."
+            : "Microphone blocked — check browser permissions and reload.");
+        } else if (/NotFound|no device/i.test(msg)) setVoiceError("No microphone found.");
+        else setVoiceError(msg.slice(0,120) || "Failed to start mic");
+        return;
+      }
+    }
+
+    // Ultimate fallback — no capture at all
+    if (isIOSDevice && !isSecure) {
+      setVoiceError("Voice needs HTTPS on iPhone — test on your deployed site. You can still type below.");
+    } else if (isIOSDevice && !webSpeechAvailable) {
+      setVoiceError("For voice on iPhone, open this page in Safari. You can still type below — replies will still speak.");
+    } else {
+      setVoiceError("Voice input isn't available — just type your message below. Replies will still speak automatically.");
+    }
+    setTimeout(() => document.querySelector(".voice-fallback-input")?.focus?.(), 100);
   }, [isListening, handleSend]);
 
   const stopListening = useCallback(() => {
     try { recognitionRef.current?.stop(); } catch {}
+    try {
+      const mr = mediaRecorderRef.current;
+      if (mr && mr.state !== "inactive") mr.stop();
+      mediaRecorderRef.current = null;
+    } catch {}
     setIsListening(false);
     // don't clear interim here — onend will handle fallback send
   }, []);
 
   const handlePendingPlay = useCallback(async () => {
+    // Must prime synchronously inside tap gesture
+    try { primeAudioForIOS(); } catch {}
     unlockAudioForIOS();
     const p = pendingPlay;
     if (!p) return;
@@ -480,6 +657,11 @@ export default function FloatingChat() {
     if (p.audio) {
       setVoiceError(null);
       setIsSpeaking(true);
+      try {
+        p.audio.playsInline = true;
+        p.audio.setAttribute("playsinline", "");
+        p.audio.muted = false;
+      } catch {}
       p.audio.onended = () => { setIsSpeaking(false); setPendingPlay(null); try { URL.revokeObjectURL(p.url); } catch {} };
       p.audio.onerror = () => { setIsSpeaking(false); setVoiceError("Playback failed — try again"); };
       try { await p.audio.play(); } catch (err) {
@@ -487,6 +669,41 @@ export default function FloatingChat() {
         setVoiceError(err?.message?.slice(0,120) || "Playback failed");
       }
       return;
+    }
+    // If we have a blob/url from a blocked WebAudio/MediaElement attempt, try to play it now
+    // that we're inside a gesture — this avoids re-fetching ElevenLabs quota
+    if (p.blob || p.url) {
+      setVoiceError(null);
+      setIsSpeaking(true);
+      try {
+        // Try WebAudio via the unlocked context (now blessed) if we have a blob
+        if (p.blob) {
+          // Re-use speak path: create object URL and play via media element inside gesture
+          // Prefer direct media element play inside gesture — always allowed
+          const url = p.url || URL.createObjectURL(p.blob);
+          const a = new Audio(url);
+          a.playsInline = true;
+          a.setAttribute("playsinline", "");
+          a.setAttribute("webkit-playsinline", "");
+          a.preload = "auto";
+          a.onended = () => { setIsSpeaking(false); setPendingPlay(null); try { URL.revokeObjectURL(url); } catch {} };
+          a.onerror = () => { setIsSpeaking(false); setVoiceError("Playback failed — try again"); };
+          await a.play();
+          return;
+        }
+        if (p.url) {
+          const a = new Audio(p.url);
+          a.playsInline = true;
+          a.setAttribute("playsinline", "");
+          a.setAttribute("webkit-playsinline", "");
+          a.onended = () => { setIsSpeaking(false); setPendingPlay(null); try { URL.revokeObjectURL(p.url); } catch {} };
+          await a.play();
+          return;
+        }
+      } catch (err) {
+        setIsSpeaking(false);
+        // fall through to re-synthesize
+      }
     }
     // no pre-fetched audio (fallback text-only) — re-synthesize on tap so this play() IS in a gesture
     if (p.text) {
@@ -776,20 +993,32 @@ export default function FloatingChat() {
                 )}
               </div>
 
-              {/* transcript / captions */}
+              {/* transcript / captions — single universal banner, no double-stack */}
               <div className="voice-transcript">
-                {!hasVoiceKey && (
+                {!ttsSupported ? (
                   <div className="voice-alert">
                     <p className="text-xs leading-relaxed">
                       Add <code className="font-mono bg-panel border border-line px-1 py-0.5 rounded">VITE_ELEVENLABS_API_KEY=sk_…</code> to <span className="font-mono">.env.local</span> and restart. Text chat still works.
                     </p>
                   </div>
-                )}
-                {!voiceSupported && hasVoiceKey && (
-                  <div className="voice-alert">
-                    Voice input needs Chrome/Edge + microphone permission. TTS will still work for replies.
-                  </div>
-                )}
+                ) : !voiceSupported ? (
+                  isIOSDevice && !isSecure ? (
+                    <div className="voice-alert info">
+                      <span aria-hidden="true" style={{ fontSize: "14px" }}>🔒</span>
+                      <span>Voice needs HTTPS on iPhone — test on your deployed site. You can still type below and replies will speak.</span>
+                    </div>
+                  ) : isIOSDevice && !webSpeechAvailable ? (
+                    <div className="voice-alert info">
+                      <span aria-hidden="true" style={{ fontSize: "14px" }}>💬</span>
+                      <span>For best voice on iPhone, open in <span className="font-semibold">Safari</span> — type below and replies will still speak automatically.</span>
+                    </div>
+                  ) : (
+                    <div className="voice-alert info">
+                      <span aria-hidden="true" style={{ fontSize: "14px" }}>💬</span>
+                      <span>Voice input works best in Safari or desktop Chrome — type below and replies will still speak automatically.</span>
+                    </div>
+                  )
+                ) : null}
                 {voiceError && <p className="voice-error">{voiceError}</p>}
                 {pendingPlay && (
                   <button type="button" className="voice-play-cta" onClick={handlePendingPlay}>
@@ -1564,16 +1793,27 @@ export default function FloatingChat() {
           gap: 8px;
         }
         .voice-alert {
-          padding: 9px 11px;
-          border-radius: 12px;
+          display: flex;
+          align-items: flex-start;
+          gap: 8px;
+          padding: 10px 12px;
+          border-radius: 14px;
           border: 1px solid rgba(245,158,11,0.32);
           background: rgba(254,243,199,0.72);
           color: #92400e;
-          font-size: 11px;
+          font-size: 11.5px;
           font-family: var(--font-mono);
           line-height: 1.45;
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+        }
+        .voice-alert.info {
+          background: rgba(239,246,255,0.92);
+          border-color: rgba(59,130,246,0.22);
+          color: #1e3a5f;
         }
         .theme-dark .voice-alert { background: rgba(245,158,11,0.14); border-color: rgba(245,158,11,0.28); color: #fde68a; }
+        .theme-dark .voice-alert.info { background: rgba(30,58,95,0.22); border-color: rgba(59,130,246,0.24); color: #bfdbfe; }
         .voice-error {
           padding: 8px 10px;
           border-radius: 10px;
@@ -1689,25 +1929,26 @@ export default function FloatingChat() {
           .voice-controls { gap: 10px; }
         }
         .voice-mic {
-          width: 56px;
-          height: 56px;
+          width: 60px;
+          height: 60px;
           border-radius: 9999px;
           display: grid;
           place-items: center;
-          border: 1px solid rgba(255,255,255,0.5);
-          background: var(--color-ink);
+          border: 1px solid rgba(255,255,255,0.55);
+          background: radial-gradient(110% 110% at 30% 20%, #2a2a2a 0%, var(--color-ink) 55%, #000 100%);
           color: var(--color-paper);
-          box-shadow: 0 6px 20px rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.18);
+          box-shadow: 0 10px 28px rgba(0,0,0,0.20), 0 2px 8px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -1px 0 rgba(0,0,0,0.2);
           cursor: pointer;
           flex-shrink: 0;
-          transition: transform 0.2s cubic-bezier(0.34,1.3,0.64,1), background 0.2s, box-shadow 0.2s, opacity 0.2s;
+          transition: transform 0.22s cubic-bezier(0.34,1.3,0.64,1), background 0.2s, box-shadow 0.2s, opacity 0.2s;
+          will-change: transform;
         }
-        .theme-dark .voice-mic { background: #fff; color: #0d0d0d; border-color: #fff; }
-        .voice-mic:hover:not(:disabled) { transform: scale(1.05); }
+        .theme-dark .voice-mic { background: radial-gradient(110% 110% at 30% 20%, #fff 0%, #f0f0f0 100%); color: #0d0d0d; border-color: rgba(255,255,255,0.9); }
+        .voice-mic:hover:not(:disabled) { transform: translateY(-1px) scale(1.04); box-shadow: 0 14px 32px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.2); }
         .voice-mic:active:not(:disabled) { transform: scale(0.96); }
         .voice-mic:disabled { opacity: 0.45; cursor: not-allowed; }
         @media (max-width: 640px) {
-          .voice-mic { width: 52px; height: 52px; }
+          .voice-mic { width: 56px; height: 56px; }
         }
         .voice-mic.is-listening {
           background: #ef4444;

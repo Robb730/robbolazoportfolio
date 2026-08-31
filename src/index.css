@@ -42,13 +42,7 @@ body {
    No per-element background/color transitions (that's what lagged).
    Swap is instant via CSS vars; ViewTransition API does a single
    compositor clip-path wash. Fallback is instant. */
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation: none;
-  mix-blend-mode: normal;
-}
-::view-transition-old(root) { z-index: 1; }
-::view-transition-new(root) { z-index: 9999; }
+
 
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*),
@@ -311,14 +305,12 @@ button:focus-visible {
 
 /* globals.css */
 /* globals.css — only disable blur during transition on devices that need it */
-@media (hover: hover) and (pointer: fine) {
-  html.vt-active .nav-glass,
-  html.vt-active .nav-glass-scrolled,
-  html.vt-active .nav-pill,
-  html.vt-active .mobile-drawer {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-  }
+
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
 }
 
 /* Mobile link stagger */
@@ -361,6 +353,18 @@ button:focus-visible {
 
 .theme-dark .nav-pill-link {
   color: #a3a3a3;
+}
+
+.theme-dark .nav-pill-highlight {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 14px rgba(0,0,0,0.25);
+}
+
+.theme-hacker .nav-pill-highlight {
+  background: rgba(0, 255, 136, 0.14);
+  border-color: rgba(0, 255, 136, 0.28);
+  box-shadow: inset 0 1px 0 rgba(0,255,136,0.18), 0 4px 16px rgba(0,255,136,0.16);
 }
 
 .theme-dark .nav-pill-link:hover {
@@ -1146,6 +1150,9 @@ html {
   padding: 24px;
   text-align: center;
   will-change: transform, opacity, filter;
+  max-width: calc(100vw - 32px);
+  width: 100%;
+  box-sizing: border-box;
 }
 .st-word-enter {
   animation: st-wrap-in 0.62s cubic-bezier(0.16, 1, 0.3, 1) 0.08s both;
@@ -1198,9 +1205,10 @@ html {
   color: var(--color-paper);
   font-size: clamp(3rem, 14vw, 7.5rem);
   text-shadow: 0 2px 24px rgba(0,0,0,0.18);
-  /* clip for staggered reveal */
+  /* clip for staggered reveal - keep vertical clipping but add horizontal buffer so italic overhang isn't cut */
   overflow: hidden;
-  padding-block: 6px;
+  padding-block: 12px;
+  padding-inline: 0.22em;
 }
 
 .st-char {
@@ -1283,6 +1291,69 @@ html {
 @keyframes st-dot-pulse {
   0%, 100% { opacity: 0.9; transform: scale(1); }
   50% { opacity: 0.35; transform: scale(0.85); }
+}
+
+.nav-pill {
+  position: relative; /* anchor for the sliding highlight */
+}
+
+.nav-pill-highlight {
+  position: absolute;
+  top: 3px;
+  left: 0;
+  bottom: 3px;
+  width: 0;
+  border-radius: 9999px;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 0;
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(10px) saturate(180%);
+  -webkit-backdrop-filter: blur(10px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.3),
+    0 4px 14px rgba(31, 38, 135, 0.10),
+    0 1px 4px rgba(0, 0, 0, 0.05);
+  transition:
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    width 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.22s ease;
+  will-change: transform, width, opacity;
+}
+
+.nav-pill-highlight::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(105deg, transparent 20%, rgba(255,255,255,0.5) 45%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.nav-pill:hover .nav-pill-highlight::after {
+  opacity: 1;
+}
+
+.nav-pill-link {
+  position: relative;
+  z-index: 1; /* sit above the highlight */
+  /* keep existing color/transition rules, but drop the old background transition on hover below */
+}
+
+.nav-pill-link:hover {
+  background: transparent; /* highlight div now carries the glass bg */
+  border-color: transparent;
+  box-shadow: none;
+  color: #0d0d0d;
+  transform: translateY(-1px);
+}
+
+.nav-pill-link.is-active:hover {
+  /* keep active pill's own solid style, highlight is hidden for active anyway */
+  transform: translateY(0);
 }
 
 /* Theme-aware: hacker uses neon ink/paper already via CSS vars, no override needed.
