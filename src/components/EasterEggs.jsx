@@ -27,6 +27,8 @@ export default function EasterEggs() {
   const mobileSwipeRef = useRef([]);
   const mobileSwipeStartRef = useRef(null);
   const mobileLogoTapsRef = useRef([]);
+  const longPressTimerRef = useRef(null);
+  const longPressTargetRef = useRef(null);
   useEffect(() => {
     try {
       const a = new Audio("/sound/achievement-unlocked.mp3");
@@ -292,6 +294,120 @@ export default function EasterEggs() {
     };
     document.addEventListener("click", onLogoTap);
     return () => document.removeEventListener("click", onLogoTap);
+  }, []);
+
+  // ── Mobile: gwapo — long-press the profile picture (About section) 1.5s ──
+  useEffect(() => {
+    const LONG_PRESS_MS = 1500;
+    const onStart = (e) => {
+      if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+      const target = e.target.closest?.(".about-photo-slot");
+      if (!target) return;
+      longPressTargetRef.current = "gwapo";
+      longPressTimerRef.current = setTimeout(() => {
+        longPressTimerRef.current = null;
+        longPressTargetRef.current = null;
+        const res = unlock("gwapo");
+        if (res) {
+          playSound();
+          window.dispatchEvent(new CustomEvent("easter:wiggle", { detail: "gwapo" }));
+          const isAll = res.remaining === 0;
+          const countText = isAll ? `all ${TOTAL}/${TOTAL} found — you're a legend!` : `${res.unlockedCount}/${TOTAL} found — ${res.remaining} left`;
+          pushToast("· gwapo si Robb — achievement unlocked ·", countText, { rainbow: isAll });
+        } else {
+          window.dispatchEvent(new CustomEvent("easter:wiggle", { detail: "gwapo" }));
+          pushToast("· gwapo si Robb — already found ·", "try the long-press or rapid toggle");
+        }
+      }, LONG_PRESS_MS);
+    };
+    const onEnd = () => {
+      if (longPressTargetRef.current === "gwapo") {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+        longPressTargetRef.current = null;
+      }
+    };
+    const onMove = (e) => {
+      // cancel if finger moves too far (15px tolerance)
+      if (!longPressTimerRef.current || longPressTargetRef.current !== "gwapo") return;
+      const t = e.touches?.[0];
+      if (!t) return;
+      const el = document.elementFromPoint(t.clientX, t.clientY);
+      if (!el?.closest?.(".about-photo-slot")) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+        longPressTargetRef.current = null;
+      }
+    };
+    window.addEventListener("touchstart", onStart, { passive: true });
+    window.addEventListener("touchend", onEnd, { passive: true });
+    window.addEventListener("touchcancel", onEnd, { passive: true });
+    window.addEventListener("touchmove", onMove, { passive: true });
+    return () => {
+      window.removeEventListener("touchstart", onStart);
+      window.removeEventListener("touchend", onEnd);
+      window.removeEventListener("touchcancel", onEnd);
+      window.removeEventListener("touchmove", onMove);
+    };
+  }, []);
+
+  // ── Mobile: hacker — long-press the theme toggle 1.5s ──
+  useEffect(() => {
+    const LONG_PRESS_MS = 1500;
+    const onStart = (e) => {
+      if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+      const target = e.target.closest?.(".theme-toggle");
+      if (!target) return;
+      longPressTargetRef.current = "konami";
+      longPressTimerRef.current = setTimeout(() => {
+        longPressTimerRef.current = null;
+        longPressTargetRef.current = null;
+        const res = unlock("konami");
+        const isHacker = document.documentElement.classList.contains("theme-hacker");
+        if (!isHacker) {
+          document.documentElement.classList.add("theme-hacker");
+          try { document.documentElement.style.colorScheme = "dark"; } catch {}
+          const meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute("content", "#020806");
+        }
+        if (res) {
+          playSound();
+          const isAll = res.remaining === 0;
+          const countText = isAll ? `all ${TOTAL}/${TOTAL} found — welcome, hacker` : `${res.unlockedCount}/${TOTAL} found — ${res.remaining} left`;
+          pushToast("· secret theme unlocked — hacker/matrix ·", countText, { rainbow: isAll });
+        } else {
+          pushToast("· hacker mode — already unlocked ·", "green is the new ink");
+        }
+      }, LONG_PRESS_MS);
+    };
+    const onEnd = () => {
+      if (longPressTargetRef.current === "konami") {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+        longPressTargetRef.current = null;
+      }
+    };
+    const onMove = (e) => {
+      if (!longPressTimerRef.current || longPressTargetRef.current !== "konami") return;
+      const t = e.touches?.[0];
+      if (!t) return;
+      const el = document.elementFromPoint(t.clientX, t.clientY);
+      if (!el?.closest?.(".theme-toggle")) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+        longPressTargetRef.current = null;
+      }
+    };
+    window.addEventListener("touchstart", onStart, { passive: true });
+    window.addEventListener("touchend", onEnd, { passive: true });
+    window.addEventListener("touchcancel", onEnd, { passive: true });
+    window.addEventListener("touchmove", onMove, { passive: true });
+    return () => {
+      window.removeEventListener("touchstart", onStart);
+      window.removeEventListener("touchend", onEnd);
+      window.removeEventListener("touchcancel", onEnd);
+      window.removeEventListener("touchmove", onMove);
+    };
   }, []);
 
   if (!toasts.length) return null;
