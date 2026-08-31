@@ -9,7 +9,17 @@ const LINKS = [
   { href: "#contact", label: "Contact" },
 ];
 
-export default function Nav({ isDark, toggleTheme, isToggling }) {
+// Short display word for the fullscreen transition — keeps the huge type readable
+const TRANSITION_LABEL = {
+  "#about": "About",
+  "#skills": "Skills",
+  "#projects": "Projects",
+  "#certificates": "Awards",
+  "#contact": "Contact",
+  "#top": "Home",
+};
+
+export default function Nav({ isDark, toggleTheme, isToggling, onTransition }) {
   const [scrolled, setScrolled] = useState(false);
   const [active, setActive] = useState("");
   const [isHacker, setIsHacker] = useState(
@@ -30,6 +40,13 @@ export default function Nav({ isDark, toggleTheme, isToggling }) {
 
   const handleNavClick = (e, href) => {
     e.preventDefault();
+    // PowerPoint-style fullscreen transition only for navbar clicks.
+    // Delegates to App → shows overlay, then scrolls underneath at cover time.
+    if (typeof onTransition === "function") {
+      const label = TRANSITION_LABEL[href] ?? href.replace(/^#/, "") ?? "Home";
+      onTransition(label, href);
+      return;
+    }
     const id = href.slice(1);
     if (id === "top") {
       window.scrollTo({ top: 0, behavior: "smooth" });

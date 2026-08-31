@@ -1079,3 +1079,244 @@ html {
     scroll-margin-top: 80px;
   }
 }
+
+/* ── Section Transition — PowerPoint-style fullscreen cover ── */
+.section-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: pointer;
+  /* isolate so backdrop-filter nav doesn't bleed */
+  isolation: isolate;
+}
+
+.st-curtain {
+  position: absolute;
+  inset: 0;
+  background: var(--color-ink);
+  will-change: transform;
+}
+
+.st-curtain-enter {
+  animation: st-curtain-in 0.52s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.st-curtain-exit {
+  animation: st-curtain-out 0.48s cubic-bezier(0.7, 0, 0.84, 0) forwards;
+}
+
+@keyframes st-curtain-in {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes st-curtain-out {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-100%); }
+}
+
+/* thin top progress wipe — like powerpoint bar */
+.st-topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  background: var(--color-paper);
+  transform-origin: left center;
+  animation: st-topbar 1.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0.9;
+}
+@keyframes st-topbar {
+  0%   { transform: scaleX(0); }
+  38%  { transform: scaleX(1); }
+  78%  { transform: scaleX(1); opacity: 1; }
+  100% { transform: scaleX(1); opacity: 0; }
+}
+
+.st-word-wrap {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 24px;
+  text-align: center;
+  will-change: transform, opacity, filter;
+}
+.st-word-enter {
+  animation: st-wrap-in 0.62s cubic-bezier(0.16, 1, 0.3, 1) 0.08s both;
+}
+.st-word-exit {
+  animation: st-wrap-out 0.42s cubic-bezier(0.7, 0, 0.84, 0) forwards;
+}
+@keyframes st-wrap-in {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes st-wrap-out {
+  from { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  to   { opacity: 0; transform: translateY(-18px) scale(0.98); filter: blur(4px); }
+}
+
+.st-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-paper);
+  opacity: 0.62;
+  animation: st-eyebrow-in 0.5s ease 0.32s both;
+}
+.st-eyebrow-line {
+  display: inline-block;
+  width: 18px;
+  height: 1px;
+  background: var(--color-paper);
+  opacity: 0.5;
+}
+@keyframes st-eyebrow-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 0.62; transform: translateY(0); }
+}
+
+.st-word {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  font-family: "DM Serif Display", serif;
+  font-style: italic;
+  font-weight: 400;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  color: var(--color-paper);
+  font-size: clamp(3rem, 14vw, 7.5rem);
+  text-shadow: 0 2px 24px rgba(0,0,0,0.18);
+  /* clip for staggered reveal */
+  overflow: hidden;
+  padding-block: 6px;
+}
+
+.st-char {
+  display: inline-block;
+  will-change: transform, opacity;
+  animation: st-char-in 0.62s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes st-char-in {
+  from {
+    opacity: 0;
+    transform: translateY(110%) rotate(4deg);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(0);
+    filter: blur(0);
+  }
+}
+
+/* underline wipe — powerpoint accent */
+.st-underline {
+  width: min(280px, 42vw);
+  height: 1px;
+  background: rgba(255,255,255,0.14);
+  overflow: hidden;
+  margin-top: 2px;
+}
+.st-underline-fill {
+  height: 100%;
+  width: 100%;
+  background: var(--color-paper);
+  transform-origin: left center;
+  animation: st-underline 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.42s both;
+}
+@keyframes st-underline {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+.st-hint {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-paper);
+  opacity: 0.38;
+  animation: st-hint-in 0.5s ease 0.62s both;
+}
+@keyframes st-hint-in {
+  from { opacity: 0; }
+  to   { opacity: 0.38; }
+}
+
+.st-bottom {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-paper);
+  opacity: 0.42;
+  z-index: 1;
+}
+.st-bottom-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--color-paper);
+  opacity: 0.9;
+  animation: st-dot-pulse 1s ease-in-out infinite;
+}
+@keyframes st-dot-pulse {
+  0%, 100% { opacity: 0.9; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.85); }
+}
+
+/* Theme-aware: hacker uses neon ink/paper already via CSS vars, no override needed.
+   Ensure paper text stays readable on ink bg in both themes. */
+.theme-dark .st-curtain { background: #ffffff; }
+.theme-dark .st-word,
+.theme-dark .st-eyebrow,
+.theme-dark .st-hint,
+.theme-dark .st-bottom { color: #0d0d0d; }
+.theme-dark .st-topbar { background: #0d0d0d; }
+.theme-dark .st-eyebrow-line { background: #0d0d0d; }
+.theme-dark .st-underline { background: rgba(13,13,13,0.1); }
+.theme-dark .st-underline-fill { background: #0d0d0d; }
+.theme-dark .st-bottom-dot { background: #0d0d0d; }
+
+.theme-hacker .st-curtain { background: #00ff88; }
+.theme-hacker .st-word,
+.theme-hacker .st-eyebrow,
+.theme-hacker .st-hint,
+.theme-hacker .st-bottom { color: #010a05; text-shadow: none; }
+.theme-hacker .st-topbar { background: #010a05; }
+.theme-hacker .st-eyebrow-line { background: #010a05; }
+.theme-hacker .st-underline { background: rgba(1,10,5,0.14); }
+.theme-hacker .st-underline-fill { background: #010a05; }
+.theme-hacker .st-bottom-dot { background: #010a05; }
+.theme-hacker .st-word { font-family: var(--font-mono); font-style: normal; font-weight: 700; letter-spacing: -0.02em; }
+
+/* Reduced motion — instant cover, no stagger */
+@media (prefers-reduced-motion: reduce) {
+  .st-curtain-enter, .st-curtain-exit,
+  .st-word-enter, .st-word-exit,
+  .st-char, .st-topbar, .st-underline-fill {
+    animation: none !important;
+  }
+  .section-transition { transition: opacity 0.2s ease; }
+  .section-transition.is-exiting { opacity: 0; }
+}
