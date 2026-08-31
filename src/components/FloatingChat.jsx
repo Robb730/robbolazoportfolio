@@ -107,10 +107,35 @@ export default function FloatingChat() {
   const [interim, setInterim] = useState("");
   const [voiceError, setVoiceError] = useState(null);
   const [voiceSupported, setVoiceSupported] = useState(false);
+  const [pendingPlay, setPendingPlay] = useState(null); // { audio, text } for iOS autoplay-blocked TTS
   const recognitionRef = useRef(null);
   const abortRef = useRef(null);
   const idleVideoRef = useRef(null);
   const talkingVideoRef = useRef(null);
+
+  // iOS Safari blocks audio.play() that isn't directly inside a user gesture.
+  // Our TTS play happens after an async Gemini fetch, so it gets blocked.
+  // Prime the audio stack on the first user tap so later play() is allowed.
+  const unlockAudioForIOS = useCallback(async () => {
+    try {
+      // resume WebAudio if suspended
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) {
+        const ctx = new AC();
+        if (ctx.state === "suspended") await ctx.resume();
+        // close the throwaway context — we just needed the resume gesture
+        try { await ctx.close(); } catch {}
+      }
+    } catch {}
+    try {
+      const a = new Audio();
+      // tiny silent wav — plays instantly and unlocks the media element pipeline
+      a.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
+      a.muted = true;
+      await a.play().catch(() => {});
+      a.pause();
+    } catch {}
+  }, []);
 
   const hasKey = hasGeminiKey();
   const hasVoiceKey = hasElevenKey();
@@ -273,19 +298,35 @@ export default function FloatingChat() {
         const ac = new AbortController();
         abortRef.current = ac;
         setIsSpeaking(true);
+        setPendingPlay(null);
         try {
           await speakWithElevenLabs(reply, {
             signal: ac.signal,
             onStart: () => setIsSpeaking(true),
-            onEnd: () => setIsSpeaking(false),
+            onEnd: () => { setIsSpeaking(false); setPendingPlay(null); },
             onError: () => setIsSpeaking(false),
           });
         } catch (e) {
-          if (e?.name !== "AbortError") {
+          if (e?.name === "AbortError") { setIsSpeaking(false); setPendingPlay(null); }
+          else if (e?.isAutoplayBlocked || e?.name === "NotAllowedError" || /not allowed|user agent/i.test(String(e?.message || ""))) {
+            console.warn("[voice] iOS autoplay blocked, need tap to play", e);
+            // keep audio for manual tap — don't clear talking state entirely, show tap button
+            setIsSpeaking(false);
+            if (e.audio) {
+              // wire up manual play: tapping will resume talking animation + play
+              const audio = e.audio;
+              audio.onended = () => { setIsSpeaking(false); setPendingPlay(null); try { URL.revokeObjectURL(e.url); } catch {} };
+              setPendingPlay({ audio, url: e.url, text: reply });
+              setVoiceError("Tap ▶ Play to hear reply — iPhone blocked autoplay");
+            } else {
+              setVoiceError("Tap ▶ Play — iPhone requires a tap to play audio");
+              setPendingPlay({ text: reply });
+            }
+          } else {
             console.error("TTS failed", e);
-            setVoiceError(e.message?.slice(0,120) || "Voice playback failed");
+            setVoiceError(e.message?.slice(0, 140) || "Voice playback failed");
+            setIsSpeaking(false);
           }
-          setIsSpeaking(false);
         }
       }
     } catch (e) {
@@ -309,12 +350,19 @@ export default function FloatingChat() {
       setMessages((m) => [...m, botFallback]);
       if (modeRef.current === "voice" && hasVoiceKey) {
         setIsSpeaking(true);
+        setPendingPlay(null);
         try {
           await speakWithElevenLabs(msg, {
             onStart: () => setIsSpeaking(true),
-            onEnd: () => setIsSpeaking(false),
+            onEnd: () => { setIsSpeaking(false); setPendingPlay(null); },
           });
-        } catch { setIsSpeaking(false); }
+        } catch (e) {
+          if (e?.isAutoplayBlocked || e?.name === "NotAllowedError" || /not allowed|user agent/i.test(String(e?.message || ""))) {
+            setIsSpeaking(false);
+            if (e.audio) setPendingPlay({ audio: e.audio, url: e.url, text: msg });
+            setVoiceError("Tap ▶ Play to hear reply — iPhone blocked autoplay");
+          } else { setIsSpeaking(false); }
+        }
       }
     } finally {
       setLoading(false);
@@ -330,9 +378,11 @@ export default function FloatingChat() {
   };
 
   const startListening = useCallback(() => {
+    unlockAudioForIOS();
+    setPendingPlay(null);
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
-      setVoiceError("Voice input not supported in this browser. Try Chrome or Edge.");
+      setVoiceError("Voice input not supported on this iPhone browser — try Safari or use the text field below. You can still tap the mic on Chrome/Edge.");
       return;
     }
     if (!hasElevenKey()) {
@@ -381,10 +431,12 @@ export default function FloatingChat() {
     };
     rec.onerror = (e) => {
       console.warn("speech error", e);
-      if (e.error === "not-allowed" || e.error === "permission-denied") {
-        setVoiceError("Microphone permission denied — allow mic access and try again.");
+      if (e.error === "not-allowed" || e.error === "permission-denied" || e.error === "service-not-allowed") {
+        setVoiceError("Microphone blocked — iPhone: Settings → Apps → Safari → Microphone → Allow. Then reload and tap mic again.");
       } else if (e.error === "no-speech") {
-        setVoiceError("Didn't catch that — tap mic and try again.");
+        setVoiceError("Didn't catch that — tap mic and try again, speak clearly near the mic.");
+      } else if (e.error === "audio-capture") {
+        setVoiceError("No microphone found — check that no other app is using the mic.");
       } else if (e.error !== "aborted") {
         setVoiceError(e.error || "Speech recognition error");
       }
@@ -419,6 +471,43 @@ export default function FloatingChat() {
     setIsListening(false);
     // don't clear interim here — onend will handle fallback send
   }, []);
+
+  const handlePendingPlay = useCallback(async () => {
+    unlockAudioForIOS();
+    const p = pendingPlay;
+    if (!p) return;
+    // if we have a pre-fetched ElevenLabs audio that was blocked, play it directly (still in a user gesture)
+    if (p.audio) {
+      setVoiceError(null);
+      setIsSpeaking(true);
+      p.audio.onended = () => { setIsSpeaking(false); setPendingPlay(null); try { URL.revokeObjectURL(p.url); } catch {} };
+      p.audio.onerror = () => { setIsSpeaking(false); setVoiceError("Playback failed — try again"); };
+      try { await p.audio.play(); } catch (err) {
+        setIsSpeaking(false);
+        setVoiceError(err?.message?.slice(0,120) || "Playback failed");
+      }
+      return;
+    }
+    // no pre-fetched audio (fallback text-only) — re-synthesize on tap so this play() IS in a gesture
+    if (p.text) {
+      setVoiceError(null);
+      setIsSpeaking(true);
+      const ac = new AbortController();
+      abortRef.current = ac;
+      try {
+        await speakWithElevenLabs(p.text, {
+          signal: ac.signal,
+          onStart: () => setIsSpeaking(true),
+          onEnd: () => { setIsSpeaking(false); setPendingPlay(null); },
+          onError: () => setIsSpeaking(false),
+        });
+        setPendingPlay(null);
+      } catch (e) {
+        setIsSpeaking(false);
+        setVoiceError(e?.message?.slice(0,120) || "Playback failed");
+      }
+    }
+  }, [pendingPlay, unlockAudioForIOS]);
 
   const toggleListening = () => {
     if (isSpeaking) {
@@ -702,6 +791,11 @@ export default function FloatingChat() {
                   </div>
                 )}
                 {voiceError && <p className="voice-error">{voiceError}</p>}
+                {pendingPlay && (
+                  <button type="button" className="voice-play-cta" onClick={handlePendingPlay}>
+                    <Volume2 className="w-4 h-4" /> Tap to play reply
+                  </button>
+                )}
 
                 {/* mini conversation */}
                 <div className="voice-history">
@@ -1491,6 +1585,24 @@ export default function FloatingChat() {
           line-height: 1.4;
         }
         .theme-dark .voice-error { color: #fecaca; background: rgba(239,68,68,0.12); }
+        .voice-play-cta {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 9px 16px;
+          border-radius: 9999px;
+          background: var(--color-ink);
+          color: var(--color-paper);
+          border: 1px solid var(--color-ink);
+          font-size: 12.5px;
+          font-weight: 600;
+          cursor: pointer;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.14);
+          animation: voice-play-bounce 1.6s ease-in-out infinite;
+          align-self: flex-start;
+        }
+        .theme-dark .voice-play-cta { background: #fff; color: #0d0d0d; border-color: #fff; }
+        @keyframes voice-play-bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
         .voice-history {
           display: flex;
           flex-direction: column;

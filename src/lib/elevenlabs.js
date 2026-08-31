@@ -121,6 +121,17 @@ export async function speakWithElevenLabs(text, { onStart, onEnd, onError, signa
   try {
     await audio.play();
   } catch (e) {
+    // iOS Safari blocks autoplay that isn't directly in a user gesture (our play is after an async Gemini+TTS fetch).
+    // Keep the audio/URL alive so the UI can offer a "Tap to play" button instead of discarding it.
+    const isAutoplayBlocked = e?.name === "NotAllowedError" || /not allowed/i.test(String(e?.message || "")) || /user agent/i.test(String(e?.message || ""));
+    if (isAutoplayBlocked) {
+      e.isAutoplayBlocked = true;
+      e.audio = audio;
+      e.url = url;
+      // Don't revoke — caller will retry via user tap and then clean up
+      onError?.(e);
+      throw e;
+    }
     stopActiveAudio();
     onError?.(e);
     throw e;
