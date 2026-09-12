@@ -7,6 +7,7 @@ import {
   List,
   ChevronLeft,
   ChevronRight,
+  ArrowUp,
   Image as ImageIcon,
 } from "lucide-react";
 import useReveal from "./../hooks/useReveal";
@@ -652,36 +653,8 @@ export default function Projects() {
         }
         .proj-list-row:hover { border-color: var(--color-ink); background: var(--color-panel); }
         .proj-list-row:active { border-color: var(--color-ink); }
-        .view-toggle {
-          display: inline-flex;
-          border: 1px solid var(--color-line);
-          padding: 2px;
-          background: var(--color-panel);
-        }
-        .sort-toggle {
-          display: inline-flex;
-          border: 1px solid var(--color-line);
-          padding: 2px;
-          background: var(--color-panel);
-        }
-        .sort-btn {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 4px;
-          padding: 6px 10px;
-          font-family: var(--font-mono);
-          font-size: 10px;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          color: var(--color-muted);
-          transition: all 0.2s ease;
-          cursor: pointer;
-          white-space: nowrap;
-        }
-        .sort-btn.is-active { background: var(--color-ink); color: var(--color-paper); }
-        @media (max-width: 640px) { .sort-btn { padding: 5px 8px; font-size: 9px; } }
-        .view-btn {
+        .sort-single-btn,
+        .view-single-btn {
           display: inline-flex;
           align-items: center;
           justify-content: center;
@@ -692,12 +665,22 @@ export default function Projects() {
           letter-spacing: 0.1em;
           text-transform: uppercase;
           color: var(--color-muted);
-          transition: all 0.2s ease;
+          border: 1px solid var(--color-line);
+          background: var(--color-panel);
+          transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
           cursor: pointer;
-          flex: 1;
+          white-space: nowrap;
         }
-        @media (min-width: 640px) { .view-btn { flex: initial; padding: 6px 12px; } }
-        .view-btn.is-active { background: var(--color-ink); color: var(--color-paper); }
+        .sort-single-btn:hover,
+        .view-single-btn:hover { border-color: var(--color-ink); color: var(--color-ink); }
+        .sort-single-btn:active,
+        .view-single-btn:active { background: var(--color-ink); color: var(--color-paper); border-color: var(--color-ink); }
+        .sort-single-btn svg,
+        .view-single-btn svg { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        @media (prefers-reduced-motion: reduce) {
+          .sort-single-btn svg,
+          .view-single-btn svg { transition: none; }
+        }
         @keyframes modal-in {
           from { opacity: 0; transform: translateY(14px) scale(0.97); }
           to { opacity: 1; transform: translateY(0) scale(1); }
@@ -788,48 +771,55 @@ export default function Projects() {
                 </p>
               </div>
 
-              {/* Controls — sort + view toggle, compact single row */}
-              <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3">
+              {/* Controls — both toggles adjacent (Latest/Oldest + Grid/List) — same row on desktop + mobile */}
+              <div className="flex items-center gap-2 sm:gap-3">
                 <span className="font-mono text-[10px] tracking-[0.14em] uppercase text-faint sm:hidden">
                   {PROJECTS.length} projects
                 </span>
+
                 <div className="flex items-center gap-2 sm:gap-3 ml-auto">
-                  <div className="sort-toggle inline-flex items-center border border-line bg-panel p-0.5">
-                    <button
-                      onClick={() => handleSortChange("latest")}
-                      className={`sort-btn ${sortOrder === "latest" ? "is-active" : ""}`}
-                      aria-pressed={sortOrder === "latest"}
-                      aria-label="Sort latest to oldest"
-                    >
-                      <ChevronLeft className="w-3 h-3 rotate-90" /> Latest
-                    </button>
-                    <button
-                      onClick={() => handleSortChange("oldest")}
-                      className={`sort-btn ${sortOrder === "oldest" ? "is-active" : ""}`}
-                      aria-pressed={sortOrder === "oldest"}
-                      aria-label="Sort oldest to latest"
-                    >
-                      Oldest <ChevronRight className="w-3 h-3 rotate-90" />
-                    </button>
-                  </div>
-                  <div className="view-toggle">
-                    <button
-                      onClick={() => setView("grid")}
-                      className={`view-btn ${view === "grid" ? "is-active" : ""}`}
-                      aria-pressed={view === "grid"}
-                      aria-label="Grid view"
-                    >
-                      <LayoutGrid className="w-3.5 h-3.5" /> Grid
-                    </button>
-                    <button
-                      onClick={() => setView("list")}
-                      className={`view-btn ${view === "list" ? "is-active" : ""}`}
-                      aria-pressed={view === "list"}
-                      aria-label="List view"
-                    >
-                      <List className="w-3.5 h-3.5" /> List
-                    </button>
-                  </div>
+                  <button
+                    onClick={() =>
+                      handleSortChange(sortOrder === "latest" ? "oldest" : "latest")
+                    }
+                    className="sort-single-btn"
+                    aria-label={
+                      sortOrder === "latest"
+                        ? "Sorted newest first — tap to show oldest first"
+                        : "Sorted oldest first — tap to show newest first"
+                    }
+                    title={sortOrder === "latest" ? "Newest first" : "Oldest first"}
+                  >
+                    <span>{sortOrder === "latest" ? "Latest" : "Oldest"}</span>
+                    <ArrowUp
+                      className="w-3.5 h-3.5"
+                      style={{
+                        transform:
+                          sortOrder === "oldest" ? "rotate(180deg)" : "rotate(0deg)",
+                      }}
+                    />
+                  </button>
+
+                  <button
+                    onClick={() => setView(view === "grid" ? "list" : "grid")}
+                    className="view-single-btn"
+                    aria-label={
+                      view === "grid"
+                        ? "Grid view — tap to show list view"
+                        : "List view — tap to show grid view"
+                    }
+                    title={view === "grid" ? "Grid view" : "List view"}
+                  >
+                    {view === "grid" ? (
+                      <>
+                        <LayoutGrid className="w-3.5 h-3.5" /> Grid
+                      </>
+                    ) : (
+                      <>
+                        <List className="w-3.5 h-3.5" /> List
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
             </div>
