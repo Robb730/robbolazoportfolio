@@ -57,9 +57,47 @@ export default function useReveal() {
     });
     mo.observe(scope, { childList: true, subtree: true });
 
+    // Resize safety net — if a [data-reveal] was missed (fast drag resize,
+    // stale threshold, font clamp reflow), force it visible when it's
+    // clearly in the viewport. Prevents above-fold hero headline staying
+    // at opacity:0 and "disappearing" on resize.
+    let resizeRaf = 0;
+    const onResize = () => {
+      cancelAnimationFrame(resizeRaf);
+      resizeRaf = requestAnimationFrame(() => {
+        scope.querySelectorAll("[data-reveal]:not(.is-visible)").forEach((el) => {
+          const r = el.getBoundingClientRect();
+          const inView = r.top < window.innerHeight * 0.92 && r.bottom > -40;
+          if (inView) {
+            // If it's hero or already intersecting, reveal immediately;
+            // otherwise re-observe so IO can reveal on scroll as intended.
+            if (el.closest("#top") || r.top < window.innerHeight * 0.85) {
+              el.classList.add("is-visible");
+              io.unobserve(el);
+            } else {
+              observeEl(el);
+            }
+          }
+        });
+      });
+    };
+    window.addEventListener("resize", onResize, { passive: true });
+    // Fallback: if hero never got is-visible within 600ms (e.g. observer
+    // missed the first frame), reveal it. Below-fold sections still wait
+    // for scroll — timer only touches #top.
+    const fallback = setTimeout(() => {
+      scope.querySelectorAll('#top [data-reveal]:not(.is-visible)').forEach((el) => {
+        el.classList.add("is-visible");
+        io.unobserve(el);
+      });
+    }, 600);
+
     return () => {
       io.disconnect();
       mo.disconnect();
+      window.removeEventListener("resize", onResize);
+      cancelAnimationFrame(resizeRaf);
+      clearTimeout(fallback);
     };
   }, []);
 

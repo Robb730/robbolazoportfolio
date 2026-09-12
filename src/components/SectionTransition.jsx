@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { SITE_YEAR } from "../lib/siteMeta";
 
 /**
  * Fullscreen PowerPoint-style section transition.
@@ -138,7 +139,7 @@ export default function SectionTransition({ label, onCover, onDone }) {
       <div className="st-bottom">
         <span className="st-bottom-label">{label.toLowerCase()}</span>
         <span className="st-bottom-dot" />
-        <span className="st-bottom-year">2026</span>
+        <span className="st-bottom-year">{SITE_YEAR}</span>
       </div>
     </div>
   );

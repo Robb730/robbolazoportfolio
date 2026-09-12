@@ -52,14 +52,20 @@ export default function Lanyard({
   mobilePosition = [1.1, 1.5, 14],
   mobileFov = 26,
 }) {
-  const [isMobile, setIsMobile] = useState(
-    () => typeof window !== "undefined" && window.innerWidth < 768
-  );
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !window.matchMedia("(min-width: 768px)").matches;
+  });
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    const mql = window.matchMedia("(min-width: 768px)");
+    const onChange = (e) => setIsMobile(!e.matches);
+    if (mql.addEventListener) mql.addEventListener("change", onChange);
+    else mql.addListener(onChange);
+    return () => {
+      if (mql.removeEventListener) mql.removeEventListener("change", onChange);
+      else mql.removeListener(onChange);
+    };
   }, []);
 
   // hacker theme detection — card goes matrix when Konami unlocked

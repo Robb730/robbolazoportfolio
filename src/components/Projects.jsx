@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, useLayoutEffect, memo } from "react";
 import {
   ArrowUpRight,
   X,
@@ -201,9 +201,94 @@ const PROJECTS = [
       "Real-time synchronization",
     ],
   },
+  {
+    id: "onedata",
+    number: "07",
+    title: "OneData",
+    category: "Data Management & Analytics",
+    year: "2026",
+    role: "Full-Stack",
+
+    description:
+      "A centralized Education Data Management and Analytics Platform for DepEd – Schools Division of City of Baliwag, unifying structured data, file management, role-based access, and real-time dashboards into one secure system.",
+
+    longDescription:
+      "OneData is a centralized web-based Education Data Management and Analytics Platform developed for the DepEd – Schools Division of City of Baliwag. It replaces fragmented spreadsheets and file-based workflows with a unified, audited system for managing educational and operational data. The platform supports four role-based user levels — administrator, division focal person, section focal person, and section personnel — with access automatically scoped according to divisions and sections. Users can upload and manage documents through a structured repository with search, filtering, pagination, bulk operations, verification, feedback, and multi-level access request workflows. Excel files can be uploaded through a validated ingestion pipeline that parses multiple structured data categories and synchronizes the information into Supabase database tables. This data powers an interactive analytics dashboard featuring enrollment trends, dropout and promotion rates, cohort analysis, teacher and classroom resources, textbook shortages, CESPES results, performance indicators, and school-year comparisons. The system also includes audit logging, security controls, real-time notifications, verified PDF generation, school-year lifecycle management, user administration, and responsive mobile navigation, providing the division with a centralized and accountable platform for education data management.",
+
+    tags: ["React.js", "Tailwind CSS", "Supabase"],
+
+    href: "https://github.com/Robb730/onedata",
+    liveUrl: "https://onedata-baliwag.com",
+
+    mock: "dashboard",
+
+    image: "/systems/onedata.png",
+
+    highlights: [
+      "4-tier role-based access control",
+      "Structured Excel data ingestion",
+      "Interactive analytics dashboards",
+      "Secure file repository & workflows",
+      "Audit logs & security controls",
+      "Real-time notifications",
+      "Verified PDF generation",
+      "School-year data management",
+    ],
+  },
+  {
+    id: "mind-over-matter",
+    number: "08",
+    title: "Mind Over Matter",
+    category: "Game Development",
+    year: "2026",
+    role: "Game Developer",
+
+    description:
+      "A 2D fighting game where history's greatest scientists — Einstein, Tesla, Galileo, Charles Darwin and more — battle with abilities rooted in their real theories and discoveries.",
+
+    longDescription:
+      "What if history's greatest minds didn't just change the world with their ideas — but fought for it? That's the question that started Mind Over Matter. We built this game because we believed science shouldn't be locked away in textbooks, delivered in dry lectures, or reduced to a formula on a chalkboard. Einstein's theory of relativity, Tesla's electromagnetic mastery, Newton's command over gravity, Darwin's law of evolution — these aren't just academic concepts. They are forces of nature that literally reshaped how humanity understands existence itself. We wanted to tear those ideas off the page, hand them to players, and let them feel what it truly means to weaponize knowledge — to experience science as something visceral, electric, and alive. But here's where it gets interesting — this isn't just a game about who hits harder. Every scientist's abilities are directly rooted in their real discoveries, and those discoveries carry their own natural strengths, weaknesses, and counters. Darwin's Survival of the Fittest means he evolves mid-fight, growing deadlier the longer the battle drags on — punishing impatience and rewarding pressure. Tesla's electrical chains devastate at range but leave him dangerously exposed up close. Oppenheimer's nuclear output is catastrophic, yet its very power demands precision and timing. The arena becomes a living argument between theories — a place where history's greatest intellectual rivalries are finally resolved not by reputation or legacy, but by combat, strategy, and mastery of science itself.",
+
+    tags: ["Unity", "C#", "Game Development"],
+
+    href: null,
+
+    liveUrl: "https://mind-over-matter-gd.vercel.app/?fbclid=IwY2xjawUSNz5wZG9mBWV4dG4DYWVtAjEwAGJyaWQRMXNhUnJJVjRLcDE5WEpYZUVzcnRjBmFwcF9pZBAyMjIwMzkxNzg4MjAwODkyAAEeRrAbsXVEK0RrzAkQ_FjZ51KbOxKTUm06qApZf_pIWckcyU51uuTVT2EVgyw_aem_Sfys4tktIXe6Tj6mOb1G1g",
+
+    mock: "game",
+
+    image: "/systems/mind-over-matter.png",
+
+    highlights: [
+      "2D science-based fighting",
+      "Scientists as fighters (Einstein, Tesla, Darwin…)",
+      "Abilities rooted in real theories",
+      "Theory counters & matchups",
+      "Built with Unity & C#",
+    ],
+  },
 ];
 
-function ProjectPreview({ project, isActive }) {
+/* ── Sort comparator — module-level so it isn't recreated every render ── */
+function compareProjects(a, b, sortOrder) {
+  const yA = parseInt(a.year, 10) || 0;
+  const yB = parseInt(b.year, 10) || 0;
+  const nA = parseInt(a.number, 10) || 0;
+  const nB = parseInt(b.number, 10) || 0;
+  if (yA !== yB) return sortOrder === "latest" ? yB - yA : yA - yB;
+  return sortOrder === "latest" ? nB - nA : nA - nB;
+}
+
+function prefersReducedMotion() {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
+/* ── Preview media, memoized: only re-renders when its own project/isActive change ── */
+const ProjectPreview = memo(function ProjectPreview({ project, isActive }) {
   const hasImage = !!project.image;
   return (
     <div className="relative aspect-[16/10] sm:aspect-[16/10] overflow-hidden border-b border-line bg-panel">
@@ -280,7 +365,7 @@ function ProjectPreview({ project, isActive }) {
       </div>
     </div>
   );
-}
+});
 
 /* ── Tilt wrapper — B&W minimalist, desktop only ───────────
    Subtle 3D tilt + monochrome glare that follows cursor.
@@ -320,7 +405,7 @@ function TiltCard({ children, onHoverChange }) {
     Shows the real landscape screenshot (project.image) once it's
     attached, with a shimmer while it loads and a soft fade/scale-in
     when ready. Until then, shows a plain placeholder — no mock UI. */
-function ProjectMedia({ project }) {
+const ProjectMedia = memo(function ProjectMedia({ project }) {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -364,12 +449,13 @@ function ProjectMedia({ project }) {
       />
     </div>
   );
-}
+});
 
 export default function Projects() {
   const [view, setView] = useState("grid");
   const [hoveredId, setHoveredId] = useState(null);
   const [selected, setSelected] = useState(null);
+  const [sortOrder, setSortOrder] = useState("latest");
 
   useEffect(() => setHoveredId(null), [view]);
   const [closing, setClosing] = useState(false);
@@ -378,35 +464,135 @@ export default function Projects() {
   const lastTriggerRef = useRef(null);
   const closeBtnRef = useRef(null);
 
+  // FLIP-animation bookkeeping for the latest/oldest sort toggle.
+  // cardRefs: project id -> card DOM node (grid article or list row).
+  // prevRectsRef: bounding rects captured right before the sort changes.
+  const cardRefs = useRef(new Map());
+  const prevRectsRef = useRef(new Map());
+
   // useReveal now watches the DOM for newly-added [data-reveal] nodes
   // (via MutationObserver), so cards added after a grid/list toggle,
   // filter, or pagination change get observed and fade in correctly.
   const revealScopeRef = useReveal();
+
+  const sortedProjects = useMemo(() => {
+    return [...PROJECTS].sort((a, b) => compareProjects(a, b, sortOrder));
+  }, [sortOrder]);
 
   const selectedProject = useMemo(
     () => PROJECTS.find((p) => p.id === selected) || null,
     [selected],
   );
   const selectedIndex = useMemo(
-    () => (selected ? PROJECTS.findIndex((p) => p.id === selected) : -1),
-    [selected],
+    () => (selected ? sortedProjects.findIndex((p) => p.id === selected) : -1),
+    [selected, sortedProjects],
   );
 
-  const openProject = (id, triggerEl) => {
+  const setCardRef = useCallback(
+    (id) => (el) => {
+      if (el) cardRefs.current.set(id, el);
+      else cardRefs.current.delete(id);
+    },
+    [],
+  );
+
+  // Capture current card positions right before a re-sort, so the
+  // layout effect below can FLIP-animate them into their new slots.
+  const captureRects = useCallback(() => {
+    const map = new Map();
+    cardRefs.current.forEach((el, id) => {
+      map.set(id, el.getBoundingClientRect());
+    });
+    prevRectsRef.current = map;
+  }, []);
+
+  const handleSortChange = useCallback(
+    (order) => {
+      if (order === sortOrder) return;
+      captureRects();
+      setSortOrder(order);
+    },
+    [sortOrder, captureRects],
+  );
+
+  const handleFlipTransitionEnd = useCallback((e) => {
+    if (e.propertyName === "transform") {
+      e.currentTarget.style.transition = "";
+      e.currentTarget.style.zIndex = "";
+      e.currentTarget.style.willChange = "";
+    }
+  }, []);
+
+  // FLIP: after the DOM reflows into the new sort order, measure each
+  // card's new position, diff it against the position captured just
+  // before the sort, and animate from "old spot" to "new spot".
+  useLayoutEffect(() => {
+    const prev = prevRectsRef.current;
+    if (prev.size === 0) return;
+
+    if (prefersReducedMotion()) {
+      prevRectsRef.current = new Map();
+      return;
+    }
+
+    cardRefs.current.forEach((el, id) => {
+      const prevRect = prev.get(id);
+      if (!prevRect || !el) return;
+      const newRect = el.getBoundingClientRect();
+      const dx = prevRect.left - newRect.left;
+      const dy = prevRect.top - newRect.top;
+      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
+
+      el.style.willChange = "transform";
+      el.style.transition = "none";
+      el.style.transform = `translate(${dx}px, ${dy}px)`;
+      el.style.zIndex = "1";
+      // Force a reflow so the browser registers the starting transform
+      // before we animate to the resting position.
+      // eslint-disable-next-line no-unused-expressions
+      el.offsetHeight;
+      requestAnimationFrame(() => {
+        el.style.transition = "transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)";
+        el.style.transform = "";
+      });
+    });
+
+    prevRectsRef.current = new Map();
+  }, [sortOrder]);
+
+  const openProject = useCallback((id, triggerEl) => {
     lastTriggerRef.current = triggerEl || null;
     setClosing(false);
     setSelected(id);
-  };
+  }, []);
 
-  const requestClose = () => {
-    if (closing) return;
-    setClosing(true);
-    closeTimerRef.current = setTimeout(() => {
-      setSelected(null);
-      setClosing(false);
-      lastTriggerRef.current?.focus?.();
-    }, 220);
-  };
+  const requestClose = useCallback(() => {
+    setClosing((prevClosing) => {
+      if (prevClosing) return prevClosing;
+      closeTimerRef.current = setTimeout(() => {
+        setSelected(null);
+        setClosing(false);
+        lastTriggerRef.current?.focus?.();
+      }, 220);
+      return true;
+    });
+  }, []);
+
+  const goPrev = useCallback(() => {
+    setSelected((current) => {
+      const idx = sortedProjects.findIndex((p) => p.id === current);
+      return idx > 0 ? sortedProjects[idx - 1].id : current;
+    });
+  }, [sortedProjects]);
+
+  const goNext = useCallback(() => {
+    setSelected((current) => {
+      const idx = sortedProjects.findIndex((p) => p.id === current);
+      return idx >= 0 && idx < sortedProjects.length - 1
+        ? sortedProjects[idx + 1].id
+        : current;
+    });
+  }, [sortedProjects]);
 
   useEffect(() => () => clearTimeout(closeTimerRef.current), []);
 
@@ -419,10 +605,8 @@ export default function Projects() {
     const onKey = (e) => {
       if (closing) return;
       if (e.key === "Escape") requestClose();
-      if (e.key === "ArrowLeft" && selectedIndex > 0)
-        setSelected(PROJECTS[selectedIndex - 1].id);
-      if (e.key === "ArrowRight" && selectedIndex < PROJECTS.length - 1)
-        setSelected(PROJECTS[selectedIndex + 1].id);
+      if (e.key === "ArrowLeft") goPrev();
+      if (e.key === "ArrowRight") goNext();
     };
     window.addEventListener("keydown", onKey);
     return () => {
@@ -430,15 +614,7 @@ export default function Projects() {
       window.removeEventListener("keydown", onKey);
       clearTimeout(focusTimer);
     };
-  }, [selected, selectedIndex, closing]);
-
-  const goPrev = () => {
-    if (selectedIndex > 0) setSelected(PROJECTS[selectedIndex - 1].id);
-  };
-  const goNext = () => {
-    if (selectedIndex < PROJECTS.length - 1)
-      setSelected(PROJECTS[selectedIndex + 1].id);
-  };
+  }, [selected, closing, requestClose, goPrev, goNext]);
 
   return (
     <>
@@ -482,6 +658,29 @@ export default function Projects() {
           padding: 2px;
           background: var(--color-panel);
         }
+        .sort-toggle {
+          display: inline-flex;
+          border: 1px solid var(--color-line);
+          padding: 2px;
+          background: var(--color-panel);
+        }
+        .sort-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 4px;
+          padding: 6px 10px;
+          font-family: var(--font-mono);
+          font-size: 10px;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: var(--color-muted);
+          transition: all 0.2s ease;
+          cursor: pointer;
+          white-space: nowrap;
+        }
+        .sort-btn.is-active { background: var(--color-ink); color: var(--color-paper); }
+        @media (max-width: 640px) { .sort-btn { padding: 5px 8px; font-size: 9px; } }
         .view-btn {
           display: inline-flex;
           align-items: center;
@@ -589,28 +788,48 @@ export default function Projects() {
                 </p>
               </div>
 
-              {/* View toggle — full width on mobile */}
-              <div className="flex items-center justify-between sm:justify-end gap-3">
+              {/* Controls — sort + view toggle, compact single row */}
+              <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3">
                 <span className="font-mono text-[10px] tracking-[0.14em] uppercase text-faint sm:hidden">
                   {PROJECTS.length} projects
                 </span>
-                <div className="view-toggle w-full sm:w-auto">
-                  <button
-                    onClick={() => setView("grid")}
-                    className={`view-btn ${view === "grid" ? "is-active" : ""}`}
-                    aria-pressed={view === "grid"}
-                    aria-label="Grid view"
-                  >
-                    <LayoutGrid className="w-3.5 h-3.5" /> Grid
-                  </button>
-                  <button
-                    onClick={() => setView("list")}
-                    className={`view-btn ${view === "list" ? "is-active" : ""}`}
-                    aria-pressed={view === "list"}
-                    aria-label="List view"
-                  >
-                    <List className="w-3.5 h-3.5" /> List
-                  </button>
+                <div className="flex items-center gap-2 sm:gap-3 ml-auto">
+                  <div className="sort-toggle inline-flex items-center border border-line bg-panel p-0.5">
+                    <button
+                      onClick={() => handleSortChange("latest")}
+                      className={`sort-btn ${sortOrder === "latest" ? "is-active" : ""}`}
+                      aria-pressed={sortOrder === "latest"}
+                      aria-label="Sort latest to oldest"
+                    >
+                      <ChevronLeft className="w-3 h-3 rotate-90" /> Latest
+                    </button>
+                    <button
+                      onClick={() => handleSortChange("oldest")}
+                      className={`sort-btn ${sortOrder === "oldest" ? "is-active" : ""}`}
+                      aria-pressed={sortOrder === "oldest"}
+                      aria-label="Sort oldest to latest"
+                    >
+                      Oldest <ChevronRight className="w-3 h-3 rotate-90" />
+                    </button>
+                  </div>
+                  <div className="view-toggle">
+                    <button
+                      onClick={() => setView("grid")}
+                      className={`view-btn ${view === "grid" ? "is-active" : ""}`}
+                      aria-pressed={view === "grid"}
+                      aria-label="Grid view"
+                    >
+                      <LayoutGrid className="w-3.5 h-3.5" /> Grid
+                    </button>
+                    <button
+                      onClick={() => setView("list")}
+                      className={`view-btn ${view === "list" ? "is-active" : ""}`}
+                      aria-pressed={view === "list"}
+                      aria-label="List view"
+                    >
+                      <List className="w-3.5 h-3.5" /> List
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -631,11 +850,13 @@ export default function Projects() {
           {/* ── Grid / List ──────────────────────── */}
           {view === "grid" ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 md:gap-6 lg:gap-8">
-              {PROJECTS.map((project, i) => {
+              {sortedProjects.map((project, i) => {
                 const isHovered = hoveredId === project.id;
                 return (
                   <article
                     key={`grid-${project.id}`}
+                    ref={setCardRef(project.id)}
+                    onTransitionEnd={handleFlipTransitionEnd}
                     data-reveal
                     className="reveal group"
                     style={{ transitionDelay: `${i * 60}ms` }}
@@ -728,11 +949,13 @@ export default function Projects() {
             </div>
           ) : (
             <div className="space-y-2.5 sm:space-y-3">
-              {PROJECTS.map((project, i) => {
+              {sortedProjects.map((project, i) => {
                 const isHovered = hoveredId === project.id;
                 return (
                   <article
                     key={`list-${project.id}`}
+                    ref={setCardRef(project.id)}
+                    onTransitionEnd={handleFlipTransitionEnd}
                     data-reveal
                     className="reveal"
                     style={{ transitionDelay: `${i * 50}ms` }}
@@ -1061,7 +1284,7 @@ export default function Projects() {
                 <ChevronLeft className="w-3.5 h-3.5" /> Prev
               </button>
               <div className="hidden sm:flex items-center gap-1.5 shrink-0">
-                {PROJECTS.map((p, i) => (
+                {sortedProjects.map((p, i) => (
                   <button
                     key={p.id}
                     onClick={() => setSelected(p.id)}
@@ -1077,11 +1300,11 @@ export default function Projects() {
               </div>
               <span className="font-mono text-[11px] tracking-[0.14em] uppercase text-faint shrink-0 sm:hidden">
                 {String(selectedIndex + 1).padStart(2, "0")} /{" "}
-                {String(PROJECTS.length).padStart(2, "0")}
+                {String(sortedProjects.length).padStart(2, "0")}
               </span>
               <button
                 onClick={goNext}
-                disabled={selectedIndex === PROJECTS.length - 1}
+                disabled={selectedIndex === sortedProjects.length - 1}
                 className="inline-flex items-center justify-center gap-1.5 font-mono text-[11px] tracking-[0.1em] uppercase px-3 py-2.5 sm:py-2 border border-line bg-panel text-muted hover:border-ink hover:text-ink active:text-ink disabled:opacity-30 disabled:cursor-not-allowed transition-colors min-h-[40px] flex-1 sm:flex-initial"
               >
                 Next <ChevronRight className="w-3.5 h-3.5" />

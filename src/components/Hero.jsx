@@ -1,29 +1,51 @@
 "use client";
 import { useEffect, useState, lazy, Suspense } from "react";
 import ScrambleText from "./ScrambleText";
+import { SITE_YEAR } from "../lib/siteMeta";
 
 const Lanyard = lazy(() => import("./Lanyard"));
 
 export default function Hero({ className = "" }) {
-  const [isMobile, setIsMobile] = useState(
-    () => typeof document !== "undefined" && document.documentElement.clientWidth < 768
-  );
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !window.matchMedia("(min-width: 768px)").matches;
+  });
 
   useEffect(() => {
-    let frame;
-    const handleResize = () => {
-      // rAF debounce — avoids reacting to noisy intermediate resize events
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        setIsMobile(document.documentElement.clientWidth < 768);
-      });
-    };
-    window.addEventListener("resize", handleResize);
+    const mql = window.matchMedia("(min-width: 768px)");
+    const onChange = (e) => setIsMobile(!e.matches);
+    // Safari <14 fallback
+    if (mql.addEventListener) mql.addEventListener("change", onChange);
+    else mql.addListener(onChange);
     return () => {
-      window.removeEventListener("resize", handleResize);
-      cancelAnimationFrame(frame);
+      if (mql.removeEventListener) mql.removeEventListener("change", onChange);
+      else mql.removeListener(onChange);
     };
   }, []);
+
+  // Safety net: hero is above the fold — guarantee its [data-reveal] nodes
+  // become visible even if IntersectionObserver misses due to resize/rAF timing.
+  // Without this, .reveal stays at opacity:0 and the huge "Robb Olazo" headline
+  // appears to disappear on resize.
+  useEffect(() => {
+    const check = () => {
+      const section = document.getElementById("top");
+      if (!section) return;
+      section.querySelectorAll("[data-reveal].reveal:not(.is-visible)").forEach((el) => {
+        const r = el.getBoundingClientRect();
+        const inView = r.top < window.innerHeight * 0.92 && r.bottom > -40;
+        if (inView) el.classList.add("is-visible");
+      });
+    };
+    const id = requestAnimationFrame(check);
+    const t = setTimeout(check, 400);
+    window.addEventListener("resize", check, { passive: true });
+    return () => {
+      cancelAnimationFrame(id);
+      clearTimeout(t);
+      window.removeEventListener("resize", check);
+    };
+  }, [isMobile]);
 
   
 
@@ -140,7 +162,7 @@ export default function Hero({ className = "" }) {
 
       {/* Hero Bottom Bar */}
       <div className="max-w-6xl mx-auto w-full pt-4 md:pt-6 border-t md:border-t-0 border-line flex items-center justify-between text-xs font-mono text-faint relative z-20">
-        <span>2026</span>
+        <span>{SITE_YEAR}</span>
 
         {/* Scroll indicator — mobile only */}
         <div className="flex md:hidden items-center gap-2">
