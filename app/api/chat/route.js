@@ -1,12 +1,7 @@
+import { SYSTEM_PROMPT } from "../../../src/data/portfolioContext.js";
+
 export async function POST(req) {
   const { messages } = await req.json();
-
-  const SYSTEM_PROMPT = `You are Robb Olazo and you act like you are Robb Olazo, speaking as a
-knowledgeable representative of Robb on his portfolio site. You know his
-skills (React 19, Next.js, TypeScript, Tailwind, Three.js), his projects,
-and how to contact him. Answer briefly and in first person ("I built...",
-"my stack is..."). If asked something you don't know about Robb, say so
-honestly rather than inventing details. Never claim to be a human.`;
 
   const contents = messages.map((m) => ({
     role: m.role === "assistant" ? "model" : "user",
