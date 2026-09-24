@@ -1,6 +1,7 @@
 import Nav from "./components/Nav";
 import Hero from "./components/Hero";
 import About from "./components/About";
+import Education from "./components/Education";
 import Skills from "./components/Skills";
 import Projects from "./components/Projects";
 import Certificates from "./components/Certificates";
@@ -89,7 +90,7 @@ export default function App() {
       ".hero-btn-primary, .hero-btn-ghost, " +
       ".about-spec-card, .skill-card, .filter-pill, " +
       ".proj-card, .proj-list-row, .sort-single-btn, .view-single-btn, " +
-      ".cert-card, .chat-fab, .chat-chip, .chat-send, .voice-mic, .voice-chip, .voice-secondary";
+      ".cert-card, .edu-card, .chat-fab, .chat-chip, .chat-send, .voice-mic, .voice-chip, .voice-secondary";
 
     let lastTarget = null;
 
@@ -141,6 +142,7 @@ export default function App() {
       <main className="relative">
         <Marquee />
         <About isDark={isDark} />
+        <Education />
         <Skills />
         <Projects />
         <Certificates />

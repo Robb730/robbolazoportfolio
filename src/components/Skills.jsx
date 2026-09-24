@@ -1,30 +1,58 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { Database } from "lucide-react";
+import {
+  SiCss,
+  SiDotnet,
+  SiExpress,
+  SiFigma,
+  SiFirebase,
+  SiGit,
+  SiHtml5,
+  SiJavascript,
+  SiMysql,
+  SiNextdotjs,
+  SiNodedotjs,
+  SiOpenjdk,
+  SiPostgresql,
+  SiPython,
+  SiReact,
+  SiSupabase,
+  SiTailwindcss,
+  SiTypescript,
+  SiUnity,
+  SiVercel,
+} from "react-icons/si";
 
 const FILTERS = ["All", "Languages", "Frameworks & UI", "Backend & Data", "Tools & Workflow"];
 
+// Brand vector logos (Simple Icons via react-icons, monochrome via CSS).
+// Java → OpenJDK and C# → .NET: those brand marks were removed from
+// Simple Icons upstream, so these are the sanctioned/ecosystem replacements.
+// SQL has no brand mark — lucide Database fallback. `icon` monogram is kept
+// as a last-resort fallback if an Icon is ever missing.
 const SKILLS = [
-  { name: "Java", sub: "Programming Language", level: 85, cat: "Languages", icon: "Jv" },
-  { name: "JavaScript", sub: "Programming Language", level: 78, cat: "Languages", icon: "JS" },
-  { name: "TypeScript", sub: "Typed JavaScript", level: 72, cat: "Languages", icon: "TS" },
-  { name: "HTML5", sub: "Markup & Structure", level: 82, cat: "Languages", icon: "H" },
-  { name: "CSS3 / Modern CSS", sub: "Styling & Layout", level: 80, cat: "Languages", icon: "C" },
-  { name: "Python", sub: "Scripting & Automation", level: 68, cat: "Languages", icon: "Py" },
-  { name: "SQL", sub: "Database Query", level: 52, cat: "Languages", icon: "SQL" },
-  { name: "MySQL", sub: "Relational Database", level: 55, cat: "Languages", icon: "My" },
-  { name: "React", sub: "Frontend Development", level: 78, cat: "Frameworks & UI", icon: "R" },
-  { name: "Next.js", sub: "Fullstack Framework", level: 70, cat: "Frameworks & UI", icon: "N" },
-  { name: "Tailwind CSS", sub: "Utility Framework", level: 84, cat: "Frameworks & UI", icon: "Tw" },
-  { name: "Node.js", sub: "Backend Development", level: 74, cat: "Frameworks & UI", icon: "Nd" },
-  { name: "Express", sub: "Backend Framework", level: 70, cat: "Frameworks & UI", icon: "Ex" },
-  { name: "Supabase", sub: "Backend & Database", level: 80, cat: "Backend & Data", icon: "Sb" },
-  { name: "Firebase", sub: "Backend & Database", level: 76, cat: "Backend & Data", icon: "Fb" },
-  { name: "PostgreSQL", sub: "Relational Database", level: 82, cat: "Backend & Data", icon: "Pg" },
-  { name: "Git & CI/CD", sub: "Version Control", level: 74, cat: "Tools & Workflow", icon: "Git" },
-  { name: "Figma", sub: "UI/UX Design & Prototyping", level: 68, cat: "Tools & Workflow", icon: "F" },
-  { name: "Vercel", sub: "Deployment Platform", level: 70, cat: "Tools & Workflow", icon: "Vc" },
-  { name: "C#", sub: "Programming Language", level: 72, cat: "Languages", icon: "C#" },
-  { name: "Unity", sub: "Game Engine & Development", level: 70, cat: "Tools & Workflow", icon: "Un" },
+  { name: "Java", sub: "Programming Language", level: 85, cat: "Languages", Icon: SiOpenjdk, icon: "Jv" },
+  { name: "JavaScript", sub: "Programming Language", level: 78, cat: "Languages", Icon: SiJavascript, icon: "JS" },
+  { name: "TypeScript", sub: "Typed JavaScript", level: 72, cat: "Languages", Icon: SiTypescript, icon: "TS" },
+  { name: "HTML5", sub: "Markup & Structure", level: 82, cat: "Languages", Icon: SiHtml5, icon: "H" },
+  { name: "CSS3 / Modern CSS", sub: "Styling & Layout", level: 80, cat: "Languages", Icon: SiCss, icon: "C" },
+  { name: "Python", sub: "Scripting & Automation", level: 68, cat: "Languages", Icon: SiPython, icon: "Py" },
+  { name: "SQL", sub: "Database Query", level: 52, cat: "Languages", Icon: Database, icon: "SQL" },
+  { name: "MySQL", sub: "Relational Database", level: 55, cat: "Languages", Icon: SiMysql, icon: "My" },
+  { name: "React", sub: "Frontend Development", level: 78, cat: "Frameworks & UI", Icon: SiReact, icon: "R" },
+  { name: "Next.js", sub: "Fullstack Framework", level: 70, cat: "Frameworks & UI", Icon: SiNextdotjs, icon: "N" },
+  { name: "Tailwind CSS", sub: "Utility Framework", level: 84, cat: "Frameworks & UI", Icon: SiTailwindcss, icon: "Tw" },
+  { name: "Node.js", sub: "Backend Development", level: 74, cat: "Frameworks & UI", Icon: SiNodedotjs, icon: "Nd" },
+  { name: "Express", sub: "Backend Framework", level: 70, cat: "Frameworks & UI", Icon: SiExpress, icon: "Ex" },
+  { name: "Supabase", sub: "Backend & Database", level: 80, cat: "Backend & Data", Icon: SiSupabase, icon: "Sb" },
+  { name: "Firebase", sub: "Backend & Database", level: 76, cat: "Backend & Data", Icon: SiFirebase, icon: "Fb" },
+  { name: "PostgreSQL", sub: "Relational Database", level: 82, cat: "Backend & Data", Icon: SiPostgresql, icon: "Pg" },
+  { name: "Git & CI/CD", sub: "Version Control", level: 74, cat: "Tools & Workflow", Icon: SiGit, icon: "Git" },
+  { name: "Figma", sub: "UI/UX Design & Prototyping", level: 68, cat: "Tools & Workflow", Icon: SiFigma, icon: "F" },
+  { name: "Vercel", sub: "Deployment Platform", level: 70, cat: "Tools & Workflow", Icon: SiVercel, icon: "Vc" },
+  { name: "C#", sub: "Programming Language", level: 72, cat: "Languages", Icon: SiDotnet, icon: "C#" },
+  { name: "Unity", sub: "Game Engine & Development", level: 70, cat: "Tools & Workflow", Icon: SiUnity, icon: "Un" },
 ];
 
 // Caps the entrance stagger so a large filter (e.g. "All", 19 items) never
@@ -176,10 +204,14 @@ export default function Skills() {
                 }}
               >
                 <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="skill-icon shrink-0">
-                    <span className="font-mono text-[11px] sm:text-[12px] font-semibold tracking-[-0.02em] text-ink">
-                      {skill.icon}
-                    </span>
+                  <div className="skill-icon shrink-0" aria-hidden="true">
+                    {skill.Icon ? (
+                      <skill.Icon className="skill-brand" />
+                    ) : (
+                      <span className="font-mono text-[11px] sm:text-[12px] font-semibold tracking-[-0.02em] text-ink">
+                        {skill.icon}
+                      </span>
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="text-[12px] sm:text-[13px] font-medium tracking-[-0.01em] text-ink leading-none truncate">
@@ -334,6 +366,18 @@ export default function Skills() {
         .theme-dark .skill-icon span { color: rgba(255,255,255,0.88) !important; }
         .theme-hacker .skill-icon { background: rgba(0,255,136,0.06); border-color: rgba(0,255,136,0.14); }
         .theme-hacker .skill-icon span { color: #00cc6a !important; }
+        /* Brand vector logos — uniform monochrome, inherits theme ink */
+        .skill-icon .skill-brand {
+          width: 18px;
+          height: 18px;
+          flex-shrink: 0;
+          color: var(--color-ink);
+        }
+        @media (min-width: 640px) {
+          .skill-icon .skill-brand { width: 19px; height: 19px; }
+        }
+        .theme-dark .skill-icon .skill-brand { color: rgba(255,255,255,0.88); }
+        .theme-hacker .skill-icon .skill-brand { color: #00cc6a; }
 
         /*
           ── Hover-only mastery reveal ──

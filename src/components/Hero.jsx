@@ -105,7 +105,7 @@ export default function Hero({ className = "" }) {
             fontFamily: "'DM Serif Display', serif",
             letterSpacing: "-0.01em",
           }}
-          title={isMobile ? "Tap 5× quickly — mobile easter egg" : undefined}
+          title={isMobile ? "" : undefined}
         >
           <span className="block font-serif not-italic pointer-events-none">Robb</span>
           <span className="block font-serif italic pointer-events-none">Olazo</span>

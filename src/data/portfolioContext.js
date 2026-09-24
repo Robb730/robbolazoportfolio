@@ -22,7 +22,10 @@ STRICT LANGUAGE RULE — MIRROR THE USER'S LANGUAGE EXACTLY:
 - Specializations: Web Development (fast, responsive, polished), Full-Stack (DB to UI), UI/UX (clean, intentional)
 - Currently looking for internship opportunities where he can grow, contribute to real projects, and build things that matter.
 - Availability: Available for freelance & full-time opportunities, including internships. Open to remote or on-site work.
-- Education (Elementary - St. Mary's College of Baliwag | High School - Immaculate Conception School of Baliuag | College - Bulacan State University - Bustos Campus)
+ - Education:
+   * Elementary — St. Mary's College of Baliuag, Baliwag, Bulacan (2011–2017)
+   * High School — Immaculate Conception School of Baliuag, Baliuag, Bulacan (2017–2023, Junior & Senior High)
+   * College — Bulacan State University — Bustos Campus, Bustos, Bulacan (2023–Present, Ongoing — Bachelor's Degree)
 
 ## Contact
 - Email: robbolazo.dev@gmail.com

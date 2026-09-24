@@ -1067,6 +1067,7 @@ html {
 
 /* Fallback offset for fixed header (JS uses live header height for precise jump) */
 #about,
+#education,
 #skills,
 #projects,
 #certificates,
@@ -1076,6 +1077,7 @@ html {
 
 @media (min-width: 768px) {
   #about,
+  #education,
   #skills,
   #projects,
   #certificates,

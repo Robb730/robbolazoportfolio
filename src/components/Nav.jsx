@@ -3,6 +3,7 @@ import { ArrowUpRight, Sun, Moon } from "lucide-react";
 
 const LINKS = [
   { href: "#about", label: "About" },
+  { href: "#education", label: "Education" },
   { href: "#skills", label: "Skills" },
   { href: "#projects", label: "Projects" },
   { href: "#certificates", label: "Certificates and Awards" },
@@ -12,6 +13,7 @@ const LINKS = [
 // Short display word for the fullscreen transition — keeps the huge type readable
 const TRANSITION_LABEL = {
   "#about": "About",
+  "#education": "Education",
   "#skills": "Skills",
   "#projects": "Projects",
   "#certificates": "Awards",
