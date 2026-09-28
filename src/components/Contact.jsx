@@ -4,16 +4,19 @@ import GitHubContributions from "./GitHubContributions";
 
 export default function Contact() {
   const [copied, setCopied] = useState(false);
+  const [showAlt, setShowAlt] = useState(false);
   const emailAddress = "robbolazo.dev@gmail.com";
+  const altEmailAddress = "robbjullian730@gmail.com";
+  const displayedEmail = showAlt ? altEmailAddress : emailAddress;
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(emailAddress);
+    navigator.clipboard.writeText(displayedEmail);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const channels = [
-    { icon: Mail, label: "Email", value: emailAddress, href: `mailto:${emailAddress}` },
+    { icon: Mail, label: "Email", value: displayedEmail, href: `mailto:${displayedEmail}` },
     { icon: Code2, label: "GitHub", value: "github.com/Robb730", href: "https://github.com/Robb730" },
     { icon: Briefcase, label: "LinkedIn", value: "linkedin.com/in/robb-jullian-haaiah-olazo", href: "https://www.linkedin.com/in/robb-jullian-haaiah-olazo-8b6a433bb/" },
   ];
@@ -79,25 +82,42 @@ export default function Contact() {
             ))}
           </div>
 
-          {/* copy row — spans full width */}
+          {/* copy row — spans full width, toggles between primary and alt email */}
           <button
             type="button"
             onClick={handleCopy}
             className="group mt-3 sm:mt-4 w-full flex items-center justify-between gap-4 border border-line bg-paper px-4 py-4 hover:border-ink transition-colors text-left"
+            aria-label={`Copy email ${displayedEmail}`}
           >
             <div className="flex items-center gap-3 min-w-0">
               <span className="w-9 h-9 inline-flex items-center justify-center border border-line bg-panel text-muted group-hover:bg-ink group-hover:text-paper group-hover:border-ink transition-colors shrink-0">
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               </span>
               <div className="min-w-0">
-                <p className="font-mono text-[10px] tracking-[0.14em] uppercase text-faint">Copy email</p>
-                <p className="font-display text-sm text-ink truncate">{emailAddress}</p>
+                <p className="font-mono text-[10px] tracking-[0.14em] uppercase text-faint">
+                  Copy email{showAlt ? " — alternative" : ""}
+                </p>
+                <p key={displayedEmail} className="font-display text-sm text-ink truncate">{displayedEmail}</p>
               </div>
             </div>
             <span className="font-mono text-[10px] sm:text-[11px] tracking-[0.12em] uppercase text-faint group-hover:text-ink transition-colors shrink-0 border border-line group-hover:border-ink px-3 py-1.5">
               {copied ? "Copied" : "Copy"}
             </span>
           </button>
+
+          {/* swap between primary and alternative email */}
+          <div className="mt-2">
+            <button
+              type="button"
+              onClick={() => { setShowAlt((v) => !v); setCopied(false); }}
+              aria-pressed={showAlt}
+              className="group inline-flex items-center gap-2 font-mono text-[10px] sm:text-[11px] tracking-[0.12em] uppercase text-faint hover:text-ink transition-colors"
+            >
+              <span className="border border-line group-hover:border-ink px-3 py-1.5 transition-colors">
+                {showAlt ? "Show primary email" : "Alternative email"}
+              </span>
+            </button>
+          </div>
         </div>
 
         {/* ── GitHub contributions (last block of contact) ─ */}

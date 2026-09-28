@@ -67,17 +67,7 @@ body {
   }
 }
 
-/* Reveal-on-scroll */
-.reveal {
-  opacity: 0;
-  transform: translateY(16px);
-  transition: opacity 0.7s ease, transform 0.7s ease;
-}
 
-.reveal.is-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
 
 /* Momentary layer re-promotion to force Chrome to re-raster the hero
    headline (e.g. after the fullscreen nav-transition curtain unmounts).
@@ -345,6 +335,70 @@ button:focus-visible {
 /* globals.css */
 /* globals.css — only disable blur during transition on devices that need it */
 
+/* ── Reveal-on-scroll — driven by hooks/useReveal.js ─────────────────────
+   REPLACES the old "Reveal-on-scroll" block (.reveal / .reveal.is-visible).
+
+   States, all set by the hook:
+     hidden    .reveal without data-revealed
+     revealed  data-revealed (+ .is-visible)  → transitions to rest position
+     done      data-reveal-done               → ALL reveal styling is dropped, so
+               the element's own transforms / transitions (hover lifts, tilt,
+               backdrop-filter, position:fixed children) are left alone and no
+               stacking context or GPU layer is kept around.
+
+   Variants:  data-reveal="fade | left | right | scale"    (default = slide up)
+   Optional:  data-reveal-delay="200"  (ms — overrides the automatic stagger)
+   ────────────────────────────────────────────────────────────────────── */
+:root {
+  --reveal-distance: 28px;
+  --reveal-duration: 0.8s; /* the hook reads this to know when a reveal has finished */
+  --reveal-ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (max-width: 640px) {
+  :root { --reveal-distance: 18px; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* variants just change where the element starts from */
+  .reveal[data-reveal="fade"]  { --reveal-y: 0px; }
+  .reveal[data-reveal="left"]  { --reveal-x: calc(var(--reveal-distance) * -1.5); --reveal-y: 0px; }
+  .reveal[data-reveal="right"] { --reveal-x: calc(var(--reveal-distance) * 1.5);  --reveal-y: 0px; }
+  .reveal[data-reveal="scale"] { --reveal-y: 12px; --reveal-scale: 0.96; }
+
+  /* hidden */
+  .reveal:not(.is-visible):not([data-revealed]) {
+    opacity: 0;
+    transform:
+      translate3d(var(--reveal-x, 0px), var(--reveal-y, var(--reveal-distance)), 0)
+      scale(var(--reveal-scale, 1));
+  }
+
+  /* revealed → rest (only while the reveal is in flight) */
+  .reveal:not([data-reveal-done]) {
+    transition:
+      opacity 0.6s ease-out var(--reveal-delay, 0ms),
+      transform var(--reveal-duration) var(--reveal-ease) var(--reveal-delay, 0ms);
+  }
+  .reveal:is(.is-visible, [data-revealed]):not([data-reveal-done]) {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* already scrolled past → no animation */
+  .reveal[data-reveal-instant]:not([data-reveal-done]) {
+    transition: none;
+  }
+}
+
+/* never hide content when it can't be revealed */
+@media print, (scripting: none) {
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
 
 ::view-transition-old(root),
 ::view-transition-new(root) {
