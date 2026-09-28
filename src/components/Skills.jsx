@@ -32,27 +32,27 @@ const FILTERS = ["All", "Languages", "Frameworks & UI", "Backend & Data", "Tools
 // SQL has no brand mark — lucide Database fallback. `icon` monogram is kept
 // as a last-resort fallback if an Icon is ever missing.
 const SKILLS = [
-  { name: "Java", sub: "Programming Language", level: 85, cat: "Languages", Icon: SiOpenjdk, icon: "Jv" },
-  { name: "JavaScript", sub: "Programming Language", level: 78, cat: "Languages", Icon: SiJavascript, icon: "JS" },
-  { name: "TypeScript", sub: "Typed JavaScript", level: 72, cat: "Languages", Icon: SiTypescript, icon: "TS" },
-  { name: "HTML5", sub: "Markup & Structure", level: 82, cat: "Languages", Icon: SiHtml5, icon: "H" },
-  { name: "CSS3 / Modern CSS", sub: "Styling & Layout", level: 80, cat: "Languages", Icon: SiCss, icon: "C" },
-  { name: "Python", sub: "Scripting & Automation", level: 68, cat: "Languages", Icon: SiPython, icon: "Py" },
-  { name: "SQL", sub: "Database Query", level: 52, cat: "Languages", Icon: Database, icon: "SQL" },
-  { name: "MySQL", sub: "Relational Database", level: 55, cat: "Languages", Icon: SiMysql, icon: "My" },
-  { name: "React", sub: "Frontend Development", level: 78, cat: "Frameworks & UI", Icon: SiReact, icon: "R" },
-  { name: "Next.js", sub: "Fullstack Framework", level: 70, cat: "Frameworks & UI", Icon: SiNextdotjs, icon: "N" },
-  { name: "Tailwind CSS", sub: "Utility Framework", level: 84, cat: "Frameworks & UI", Icon: SiTailwindcss, icon: "Tw" },
-  { name: "Node.js", sub: "Backend Development", level: 74, cat: "Frameworks & UI", Icon: SiNodedotjs, icon: "Nd" },
-  { name: "Express", sub: "Backend Framework", level: 70, cat: "Frameworks & UI", Icon: SiExpress, icon: "Ex" },
-  { name: "Supabase", sub: "Backend & Database", level: 80, cat: "Backend & Data", Icon: SiSupabase, icon: "Sb" },
-  { name: "Firebase", sub: "Backend & Database", level: 76, cat: "Backend & Data", Icon: SiFirebase, icon: "Fb" },
-  { name: "PostgreSQL", sub: "Relational Database", level: 82, cat: "Backend & Data", Icon: SiPostgresql, icon: "Pg" },
-  { name: "Git & CI/CD", sub: "Version Control", level: 74, cat: "Tools & Workflow", Icon: SiGit, icon: "Git" },
-  { name: "Figma", sub: "UI/UX Design & Prototyping", level: 68, cat: "Tools & Workflow", Icon: SiFigma, icon: "F" },
-  { name: "Vercel", sub: "Deployment Platform", level: 70, cat: "Tools & Workflow", Icon: SiVercel, icon: "Vc" },
-  { name: "C#", sub: "Programming Language", level: 72, cat: "Languages", Icon: SiDotnet, icon: "C#" },
-  { name: "Unity", sub: "Game Engine & Development", level: 70, cat: "Tools & Workflow", Icon: SiUnity, icon: "Un" },
+  { name: "Java", sub: "Programming Language", cat: "Languages", Icon: SiOpenjdk, icon: "Jv" },
+  { name: "JavaScript", sub: "Programming Language", cat: "Languages", Icon: SiJavascript, icon: "JS" },
+  { name: "TypeScript", sub: "Typed JavaScript", cat: "Languages", Icon: SiTypescript, icon: "TS" },
+  { name: "HTML5", sub: "Markup & Structure", cat: "Languages", Icon: SiHtml5, icon: "H" },
+  { name: "CSS3 / Modern CSS", sub: "Styling & Layout", cat: "Languages", Icon: SiCss, icon: "C" },
+  { name: "Python", sub: "Scripting & Automation", cat: "Languages", Icon: SiPython, icon: "Py" },
+  { name: "SQL", sub: "Database Query", cat: "Languages", Icon: Database, icon: "SQL" },
+  { name: "MySQL", sub: "Relational Database", cat: "Languages", Icon: SiMysql, icon: "My" },
+  { name: "React", sub: "Frontend Development", cat: "Frameworks & UI", Icon: SiReact, icon: "R" },
+  { name: "Next.js", sub: "Fullstack Framework", cat: "Frameworks & UI", Icon: SiNextdotjs, icon: "N" },
+  { name: "Tailwind CSS", sub: "Utility Framework", cat: "Frameworks & UI", Icon: SiTailwindcss, icon: "Tw" },
+  { name: "Node.js", sub: "Backend Development", cat: "Frameworks & UI", Icon: SiNodedotjs, icon: "Nd" },
+  { name: "Express", sub: "Backend Framework", cat: "Frameworks & UI", Icon: SiExpress, icon: "Ex" },
+  { name: "Supabase", sub: "Backend & Database", cat: "Backend & Data", Icon: SiSupabase, icon: "Sb" },
+  { name: "Firebase", sub: "Backend & Database", cat: "Backend & Data", Icon: SiFirebase, icon: "Fb" },
+  { name: "PostgreSQL", sub: "Relational Database", cat: "Backend & Data", Icon: SiPostgresql, icon: "Pg" },
+  { name: "Git & CI/CD", sub: "Version Control", cat: "Tools & Workflow", Icon: SiGit, icon: "Git" },
+  { name: "Figma", sub: "UI/UX Design & Prototyping", cat: "Tools & Workflow", Icon: SiFigma, icon: "F" },
+  { name: "Vercel", sub: "Deployment Platform", cat: "Tools & Workflow", Icon: SiVercel, icon: "Vc" },
+  { name: "C#", sub: "Programming Language", cat: "Languages", Icon: SiDotnet, icon: "C#" },
+  { name: "Unity", sub: "Game Engine & Development", cat: "Tools & Workflow", Icon: SiUnity, icon: "Un" },
 ];
 
 // Caps the entrance stagger so a large filter (e.g. "All", 19 items) never
@@ -63,7 +63,6 @@ const staggerDelay = (i) => Math.min(i * 0.025, MAX_STAGGER);
 
 export default function Skills() {
   const [active, setActive] = useState("All");
-  const [openSkill, setOpenSkill] = useState(null);
   const shouldReduce = useReducedMotion();
 
   const filtered = useMemo(() => {
@@ -190,18 +189,8 @@ export default function Skills() {
                         layout: { duration: 0.28, ease: [0.16, 1, 0.3, 1] },
                       }
                 }
-                className={`skill-card group ${openSkill === skill.name ? "is-open" : ""}`}
+                className="skill-card group"
                 style={{ willChange: "transform, opacity", contain: "layout paint" }}
-                tabIndex={0}
-                onClick={() => {
-                  // touch: tap toggles mastery persistently; desktop hover already works via CSS
-                  setOpenSkill((prev) => (prev === skill.name ? null : skill.name));
-                }}
-                onBlur={(e) => {
-                  if (!e.currentTarget.contains(e.relatedTarget)) {
-                    setOpenSkill((prev) => (prev === skill.name ? null : prev));
-                  }
-                }}
               >
                 <div className="flex items-center gap-2 sm:gap-3">
                   <div className="skill-icon shrink-0" aria-hidden="true">
@@ -224,20 +213,6 @@ export default function Skills() {
                   <span className="skill-cat font-mono text-[9px] tracking-[0.08em] uppercase text-faint/60 hidden sm:inline-flex shrink-0 border border-line/70 rounded-full px-2 py-1 bg-panel/50">
                     {skill.cat === "Frameworks & UI" ? "FW/UI" : skill.cat === "Backend & Data" ? "Backend" : skill.cat === "Tools & Workflow" ? "Tools" : skill.cat}
                   </span>
-                </div>
-
-                <div className="skill-mastery-wrap">
-                  <div className="skill-mastery">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="font-mono text-[10px] tracking-[0.12em] uppercase text-faint/70">Mastery</span>
-                      <span className="skill-pct font-mono text-[11px] tabular-nums text-faint">
-                        {skill.level}%
-                      </span>
-                    </div>
-                    <div className="skill-track" aria-hidden="true">
-                      <span className="skill-track-fill" style={{ width: `${skill.level}%` }} />
-                    </div>
-                  </div>
                 </div>
               </motion.article>
             ))}
@@ -314,18 +289,41 @@ export default function Skills() {
           contain: layout paint;
           transform: translateZ(0);
           backface-visibility: hidden;
-          transition: transform 0.18s cubic-bezier(0.16,1,0.3,1), background 0.18s ease, border-color 0.18s ease;
-          cursor: pointer;
+          transition: transform 0.18s cubic-bezier(0.16,1,0.3,1), background 0.18s ease, border-color 0.18s ease, box-shadow 0.25s ease;
+          cursor: default;
           -webkit-tap-highlight-color: transparent;
         }
         @media (min-width: 640px) {
           .skill-card { padding: 16px 16px 14px; }
         }
-        .skill-card:hover,
-        .skill-card.is-open {
-          transform: translateY(-2px) translateZ(0);
+        .skill-card:hover {
+          transform: translateY(-3px) translateZ(0);
           background: #ffffff;
-          border-color: var(--color-line);
+          border-color: var(--color-ink);
+          box-shadow: 0 12px 28px rgba(0,0,0,0.08);
+        }
+        /* Sheen sweep — diagonal light pass on hover */
+        .skill-card::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(105deg, transparent 30%, rgba(13,13,13,0.06) 50%, transparent 70%);
+          transform: translateX(-120%);
+          transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+          pointer-events: none;
+        }
+        .skill-card:hover::after {
+          transform: translateX(120%);
+        }
+        /* Icon tile inverts to ink, glyph pops */
+        .skill-card:hover .skill-icon {
+          background: var(--color-ink);
+          border-color: var(--color-ink);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
+        }
+        .skill-card:hover .skill-icon .skill-brand {
+          color: var(--color-paper);
+          transform: scale(1.08) rotate(-4deg);
         }
         .theme-dark .skill-card {
           background: rgba(255, 255, 255, 0.06);
@@ -334,11 +332,32 @@ export default function Skills() {
           border-color: rgba(255,255,255,0.08);
           box-shadow: none;
         }
-        .theme-dark .skill-card:hover,
-        .theme-dark .skill-card.is-open {
+        .theme-dark .skill-card:hover {
           background: rgba(255, 255, 255, 0.10);
-          border-color: rgba(255,255,255,0.14);
+          border-color: rgba(255,255,255,0.22);
+          box-shadow: 0 12px 28px rgba(0,0,0,0.45);
         }
+        .theme-dark .skill-card::after {
+          background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.08) 50%, transparent 70%);
+        }
+        .theme-dark .skill-card:hover .skill-icon {
+          background: #ffffff;
+          border-color: #ffffff;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.2);
+        }
+        .theme-dark .skill-card:hover .skill-icon .skill-brand { color: #0d0d0d; }
+        .theme-hacker .skill-card:hover {
+          border-color: #00ff88;
+          box-shadow: 0 12px 28px rgba(0,255,136,0.14);
+        }
+        .theme-hacker .skill-card::after {
+          background: linear-gradient(105deg, transparent 30%, rgba(0,255,136,0.08) 50%, transparent 70%);
+        }
+        .theme-hacker .skill-card:hover .skill-icon {
+          background: #00ff88;
+          border-color: #00ff88;
+        }
+        .theme-hacker .skill-card:hover .skill-icon .skill-brand { color: #010a05; }
         .theme-hacker .skill-card {
           background: rgba(6, 22, 13, 0.48);
           border-color: rgba(0,255,136,0.16);
@@ -379,84 +398,17 @@ export default function Skills() {
         .theme-dark .skill-icon .skill-brand { color: rgba(255,255,255,0.88); }
         .theme-hacker .skill-icon .skill-brand { color: #00cc6a; }
 
-        /*
-          ── Hover-only mastery reveal ──
-          Deliberately NOT animating grid-template-rows here. Animating a
-          grid track size forces the browser to re-run the grid sizing
-          algorithm on every frame — a real layout recalculation, not a
-          compositor-only op. Combined with backdrop-filter (which already
-          forces its own expensive, content-dependent compositing layer),
-          that combo is what was capping this at ~30fps.
-          Instead: one fixed-height max-height transition (cheap block
-          reflow, no grid algorithm) + opacity, on ONE element. Everything
-          inside just rides along via that single parent's opacity — no
-          separate transform/opacity transitions per child, so the browser
-          isn't juggling five simultaneous animated properties per card.
-        */
-        .skill-mastery-wrap {
-          max-height: 0;
-          opacity: 0;
-          overflow: hidden;
-          transition: max-height 0.22s cubic-bezier(0.16,1,0.3,1), opacity 0.16s ease;
+        /* Icon + glyph transition for the hover invert/pop */
+        .skill-icon {
+          transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
         }
-        .skill-mastery {
-          padding-top: 12px;
-        }
-        .skill-card:hover .skill-mastery-wrap,
-        .skill-card:focus-within .skill-mastery-wrap,
-        .skill-card.is-open .skill-mastery-wrap {
-          max-height: 44px;
-          opacity: 1;
-        }
-        /* will-change scoped to the hover moment only — an idle card (there
-           can be up to 19 on screen at once) no longer sits at rest with
-           permanently GPU-promoted layers it isn't using. */
-        .skill-card:hover .skill-mastery-wrap,
-        .skill-card:focus-within .skill-mastery-wrap,
-        .skill-card.is-open .skill-mastery-wrap,
-        .skill-card:hover .skill-track-fill,
-        .skill-card:focus-within .skill-track-fill,
-        .skill-card.is-open .skill-track-fill {
-          will-change: transform, opacity, max-height;
-        }
-        .skill-pct {
-          font-variant-numeric: tabular-nums;
-        }
-        .skill-track {
-          height: 3px;
-          border-radius: 9999px;
-          background: var(--color-ghost);
-          overflow: hidden;
-        }
-        .theme-dark .skill-track { background: rgba(255,255,255,0.08); }
-        .theme-hacker .skill-track { background: rgba(0,255,136,0.10); }
-        .skill-track-fill {
-          display: block;
-          height: 100%;
-          border-radius: inherit;
-          background: var(--color-ink);
-          transform-origin: left center;
-          transform: scaleX(0);
-          transition: transform 0.22s cubic-bezier(0.16,1,0.3,1);
-        }
-        .theme-dark .skill-track-fill { background: #ffffff; }
-        .theme-hacker .skill-track-fill { background: #00ff88; }
-        .skill-card:hover .skill-track-fill,
-        .skill-card:focus-within .skill-track-fill,
-        .skill-card.is-open .skill-track-fill {
-          transform: scaleX(1);
-        }
-        /* Mobile — tap toggles via .is-open, not hover */
-        @media (hover: none) {
-          .skill-mastery-wrap { max-height: 0; opacity: 0; }
-          .skill-card.is-open .skill-mastery-wrap { max-height: 44px; opacity: 1; }
-          .skill-track-fill { transform: scaleX(0); }
-          .skill-card.is-open .skill-track-fill { transform: scaleX(1); }
+        .skill-icon .skill-brand {
+          transition: transform 0.25s cubic-bezier(0.34, 1.3, 0.64, 1), color 0.2s ease;
         }
         @media (prefers-reduced-motion: reduce) {
-          .skill-card, .skill-mastery-wrap, .skill-track-fill, .filter-pill { transition: none !important; }
-          .skill-mastery-wrap { max-height: 44px !important; opacity: 1 !important; }
-          .skill-track-fill { transform: scaleX(1) !important; }
+          .skill-card, .skill-card::after, .skill-icon, .skill-icon .skill-brand, .filter-pill { transition: none !important; }
+          .skill-card:hover { transform: none; }
+          .skill-card::after { display: none; }
         }
       `}</style>
     </section>

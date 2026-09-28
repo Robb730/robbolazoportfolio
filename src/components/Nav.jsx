@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowUpRight, Sun, Moon } from "lucide-react";
+import { Sun, Moon } from "lucide-react";
 
 const LINKS = [
   { href: "#about", label: "About" },
@@ -109,7 +109,13 @@ export default function Nav({ isDark, toggleTheme, isToggling, onTransition }) {
 
     const onScroll = () => {
       const y = window.scrollY;
-      setScrolled(y > 20);
+      // Transparent over the hero: glass only once #top is out of view.
+      const hero = document.getElementById("top");
+      const headerH = headerRef.current?.offsetHeight ?? 120;
+      const pastHero = hero
+        ? hero.getBoundingClientRect().bottom <= headerH
+        : y > 20;
+      setScrolled(pastHero);
 
       const h = document.documentElement.scrollHeight - window.innerHeight;
       targetRef.v = h > 0 ? Math.min(100, Math.max(0, (y / h) * 100)) : 0;
@@ -186,11 +192,16 @@ export default function Nav({ isDark, toggleTheme, isToggling, onTransition }) {
     <header
       ref={headerRef}
       className={`fixed top-0 inset-x-0 z-50 transition-all duration-500 ${
-        scrolled ? "nav-glass-scrolled py-3" : "nav-glass py-3 sm:py-4"
+        scrolled ? "nav-glass-scrolled py-3" : "nav-naked py-3 sm:py-4"
       }`}
     >
-      {/* Scroll progress — GPU transform, driven via rAF */}
-      <div aria-hidden="true" ref={progressRef} className="nav-progress" />
+      {/* Scroll progress — hidden over hero, GPU transform, driven via rAF */}
+      <div
+        aria-hidden="true"
+        ref={progressRef}
+        className="nav-progress"
+        style={{ opacity: scrolled ? 0.9 : 0 }}
+      />
 
       <nav className="max-w-6xl mx-auto grid grid-cols-[auto_1fr_auto] md:grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4 px-3 sm:px-6 md:px-10">
         {/* Left — logo */}
@@ -218,7 +229,7 @@ export default function Nav({ isDark, toggleTheme, isToggling, onTransition }) {
           <div
             ref={pillRef}
             onMouseLeave={hideHighlight}
-            className="nav-pill flex items-center gap-1 flex-nowrap overflow-x-auto scrollbar-none max-w-[52vw] sm:max-w-none"
+            className={`nav-pill flex items-center gap-1 flex-nowrap overflow-x-auto scrollbar-none max-w-[52vw] sm:max-w-none ${scrolled ? "" : "nav-pill-naked"}`}
           >
             <div
               aria-hidden="true"
@@ -251,7 +262,7 @@ export default function Nav({ isDark, toggleTheme, isToggling, onTransition }) {
           </div>
         </div>
 
-        {/* Right — actions */}
+        {/* Right — theme toggle only */}
         <div className="justify-self-end flex items-center gap-1.5 sm:gap-3 shrink-0">
           <button
             type="button"
@@ -261,21 +272,13 @@ export default function Nav({ isDark, toggleTheme, isToggling, onTransition }) {
             }}
             disabled={!!isToggling}
             aria-busy={isToggling ? "true" : "false"}
-            className={`theme-toggle !w-8 !h-8 sm:!w-9 sm:!h-9 shrink-0 ${isDark ? "theme-dark-btn" : "theme-light-btn"} ${isToggling ? "pointer-events-none opacity-70" : ""}`}
+            className={`theme-toggle theme-toggle-redesigned !w-10 !h-10 sm:!w-11 sm:!h-11 shrink-0 ${scrolled ? "" : "theme-toggle-naked"} ${isDark ? "theme-dark-btn" : "theme-light-btn"} ${isToggling ? "pointer-events-none opacity-70" : ""}`}
             aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
             title={isDark ? "Light mode" : "Dark mode"}
           >
-            <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 theme-toggle-icon sun" />
-            <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4 theme-toggle-icon moon" />
+            <Sun className="w-4 h-4 sm:w-[18px] sm:h-[18px] theme-toggle-icon sun" />
+            <Moon className="w-4 h-4 sm:w-[18px] sm:h-[18px] theme-toggle-icon moon" />
           </button>
-          <a
-            href="#contact"
-            onClick={(e) => handleNavClick(e, "#contact")}
-            className="nav-cta group inline-flex items-center gap-1.5 text-[0.74rem] sm:text-[0.8125rem] px-4 sm:px-5 py-2 sm:py-2"
-          >
-            <span className="tracking-[-0.01em]">Hire me</span>
-            <ArrowUpRight className="hire-arrow w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-x-[2px] group-hover:-translate-y-[2px]" />
-          </a>
         </div>
       </nav>
     </header>

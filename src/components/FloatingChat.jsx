@@ -805,7 +805,7 @@ export default function FloatingChat() {
               <div className="flex items-center gap-1.5">
                 <h3 className="text-sm font-semibold tracking-tight text-ink leading-none">Robb Olazo</h3>
                 <span className="inline-flex items-center gap-1 rounded-full bg-ink text-paper px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-widest">
-                  <Sparkles className="w-3 h-3" /> AI
+                AI
                 </span>
               </div>
               <p className="text-xs text-muted font-mono tracking-wide truncate mt-0.5">

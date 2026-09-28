@@ -63,6 +63,26 @@ export default function App() {
     setTransition(null);
     // small unlock delay so rapid clicks don't re-trigger before exit finishes
     setTimeout(() => { lockRef.current = false; }, 220);
+    // Repaint nudge: removing the fullscreen curtain can leave Chrome with
+    // a dropped raster of the giant hero headline (blank name until refresh).
+    // Re-assert hero reveal classes + force a re-raster of the h1 layer.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        try {
+          const hero = document.getElementById("top");
+          if (!hero) return;
+          hero
+            .querySelectorAll("[data-reveal]:not(.is-visible)")
+            .forEach((el) => el.classList.add("is-visible"));
+          const h1 = hero.querySelector("h1");
+          if (h1) {
+            h1.classList.add("hero-repaint");
+            void h1.offsetHeight; // reflow → re-raster
+            setTimeout(() => h1.classList.remove("hero-repaint"), 60);
+          }
+        } catch {}
+      });
+    });
   }, []);
 
   // ── Global hover click SFX (random of 9, autoplay after first gesture) ──

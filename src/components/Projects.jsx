@@ -268,6 +268,36 @@ const PROJECTS = [
       "Built with Unity & C#",
     ],
   },
+  {
+    id: "bulsu-handbook",
+    number: "09",
+    title: "BulSU Student E-Handbook",
+    category: "Mobile",
+    year: "2025",
+    role: "Project Leader / Android Developer",
+
+    description:
+      "A native Android app digitizing the BulSU Bustos student handbook — history, hymns, policies, program offerings, curricula, campus directory and staff listings — plus a schedule maker where students build a color-coded weekly timetable saved to SQLite and exportable as an image.",
+
+    longDescription:
+      "A native Android application developed for BulSU Bustos Campus that puts the entire student handbook on students' phones, working fully offline. A 16-section dashboard covers university history, hymns and marches with videos, general provisions, academic regulations, conduct and discipline, student affairs and institutional services, program offerings per college, course curricula with PDFs, the local administrative council, student organizations, campus directory and maps, downloadable forms, and staff directories. Its schedule maker lets students build a color-coded weekly class timetable on a 14×7 grid — adding subjects with codes, names, days and times — persisted in SQLite with edit and delete support, and exportable as a PNG image to the gallery for sharing. Led and built with a team of classmates.",
+
+    tags: ["Java", "Android SDK", "SQLite", "XML", "Material Design"],
+
+    href: "https://github.com/Robb730/bulsu-handbook",
+
+    mock: "mobile",
+
+    image: "/systems/bulsu-handbook.jpg",
+
+    highlights: [
+      "16-section offline handbook hub",
+      "Color-coded weekly schedule maker",
+      "SQLite class persistence",
+      "Timetable PNG export & sharing",
+      "Hymn videos, curricula PDFs & forms",
+    ],
+  },
 ];
 
 /* ── Sort comparator — module-level so it isn't recreated every render ── */
@@ -842,13 +872,18 @@ export default function Projects() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 md:gap-6 lg:gap-8">
               {sortedProjects.map((project, i) => {
                 const isHovered = hoveredId === project.id;
+                // Odd count → last card sits alone in its row: span both
+                // tracks and center it at one-card width (sm+ only; mobile
+                // is single-column so every card is already full-width).
+                const isOrphan =
+                  sortedProjects.length % 2 === 1 && i === sortedProjects.length - 1;
                 return (
                   <article
                     key={`grid-${project.id}`}
                     ref={setCardRef(project.id)}
                     onTransitionEnd={handleFlipTransitionEnd}
                     data-reveal
-                    className="reveal group"
+                    className={`reveal group${isOrphan ? " sm:col-span-2 sm:justify-self-center sm:w-full sm:max-w-[calc(50%-0.75rem)]" : ""}`}
                     style={{ transitionDelay: `${i * 60}ms` }}
                   >
                     <TiltCard onHoverChange={(v) => setHoveredId(v ? project.id : null)}>

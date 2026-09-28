@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Copy, Check, ArrowUpRight, Code2, Briefcase, Mail, MapPin } from "lucide-react";
+import GitHubContributions from "./GitHubContributions";
 
 export default function Contact() {
   const [copied, setCopied] = useState(false);
@@ -97,6 +98,11 @@ export default function Contact() {
               {copied ? "Copied" : "Copy"}
             </span>
           </button>
+        </div>
+
+        {/* ── GitHub contributions (last block of contact) ─ */}
+        <div data-reveal className="reveal mt-3 sm:mt-4" style={{ transitionDelay: "120ms" }}>
+          <GitHubContributions />
         </div>
       </div>
     </section>

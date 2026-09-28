@@ -95,6 +95,7 @@ export default function useHackerCorruption() {
 
     const tick = () => {
       if (isReduced()) return;
+      if (document.hidden) return;
       if (!document.documentElement.classList.contains("theme-hacker")) return;
       const targets = getTargets();
       targets.forEach((el) => {

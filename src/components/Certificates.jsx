@@ -168,11 +168,19 @@ export default function Certificates() {
               const isHovered = hoveredId === cert.id;
               const isLink = cert.verifyUrl !== "#";
               const Card = isLink ? "a" : "div";
+              // Lone card in the last row → span the row and center it at
+              // one-card width (sm: 2-col halves, lg: 3-col thirds; mobile
+              // is single-column so every card is already full-width).
+              const isSmOrphan =
+                CERTIFICATES.length % 2 === 1 && i === CERTIFICATES.length - 1;
+              const isLgOrphan =
+                CERTIFICATES.length % 3 === 1 && i === CERTIFICATES.length - 1;
+              const orphanClass = `${isSmOrphan ? " sm:col-span-2 sm:justify-self-center sm:w-full sm:max-w-[calc(50%-0.625rem)]" : ""}${isLgOrphan ? " lg:col-span-3 lg:max-w-[calc(33.333%-1rem)]" : ""}`;
               return (
                 <article
                   key={cert.id}
                   data-reveal
-                  className="reveal group"
+                  className={`reveal group${orphanClass}`}
                   style={{ transitionDelay: `${i * 70}ms` }}
                   onMouseEnter={() => setHoveredId(cert.id)}
                   onMouseLeave={() => setHoveredId(null)}

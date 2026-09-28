@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Copy, ExternalLink, FileText, Mail } from "lucide-react";
+import ResumeViewer from "./ResumeViewer";
 
 const EMAIL = "robbolazo.dev@gmail.com";
 const GITHUB = "https://github.com/Robb730";
@@ -8,6 +9,10 @@ export default function ContextMenu() {
   const [pos, setPos] = useState(null);
   const [toast, setToast] = useState("");
   const menuRef = useRef(null);
+
+  useEffect(() => {
+  if (pos) window.dispatchEvent(new Event("resume:prefetch"));
+}, [pos]);
 
   useEffect(() => {
     const onContext = (e) => {
@@ -66,11 +71,8 @@ export default function ContextMenu() {
   };
 
   const viewResume = () => {
-    // No static resume file yet — scroll to about/contact as meaningful fallback
-    const el = document.getElementById("about") || document.getElementById("contact");
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-    flash("Résumé — scroll to About / Contact");
     setPos(null);
+    try { window.dispatchEvent(new CustomEvent("resume:open")); } catch {}
   };
 
   const openGithub = () => {
@@ -79,21 +81,27 @@ export default function ContextMenu() {
   };
 
   if (!pos) {
-    return toast ? (
-      <div className="ctx-toast-wrap">
-        <div className="ctx-toast">{toast}</div>
-        <style>{`
-          .ctx-toast-wrap { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 70; pointer-events: none; }
-          .ctx-toast { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-paper); background: var(--color-ink); border: 1px solid var(--color-ink); padding: 8px 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.18); animation: ctx-toast 0.3s cubic-bezier(0.16,1,0.3,1), ctx-toast-out 0.3s ease 1.5s forwards; }
-          @keyframes ctx-toast { from { opacity:0; transform: translateY(8px);} to {opacity:1; transform:translateY(0);} }
-          @keyframes ctx-toast-out { from {opacity:1;} to {opacity:0; transform: translateY(-6px);} }
-        `}</style>
-      </div>
-    ) : null;
+    return (
+      <>
+        <ResumeViewer />
+        {toast ? (
+          <div className="ctx-toast-wrap">
+            <div className="ctx-toast">{toast}</div>
+            <style>{`
+              .ctx-toast-wrap { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 70; pointer-events: none; }
+              .ctx-toast { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-paper); background: var(--color-ink); border: 1px solid var(--color-ink); padding: 8px 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.18); animation: ctx-toast 0.3s cubic-bezier(0.16,1,0.3,1), ctx-toast-out 0.3s ease 1.5s forwards; }
+              @keyframes ctx-toast { from { opacity:0; transform: translateY(8px);} to {opacity:1; transform:translateY(0);} }
+              @keyframes ctx-toast-out { from {opacity:1;} to {opacity:0; transform: translateY(-6px);} }
+            `}</style>
+          </div>
+        ) : null}
+      </>
+    );
   }
 
   return (
     <>
+      <ResumeViewer />
       <div
         ref={menuRef}
         role="menu"

@@ -95,6 +95,17 @@ export default function Lanyard({
   const activePosition = isMobile ? mobilePosition : position;
   const activeFov = isMobile ? mobileFov : fov;
 
+  // Pause the physics/render loop while the tab is hidden — saves GPU/CPU
+  // over long sessions and lowers the chance of a dropped raster on return.
+  const [tabHidden, setTabHidden] = useState(
+    () => typeof document !== "undefined" && document.hidden
+  );
+  useEffect(() => {
+    const onVis = () => setTabHidden(document.hidden);
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
+
   // toast for easter egg — B&W minimalist
   const [toast, setToast] = useState(null);
   useEffect(() => {
@@ -110,7 +121,7 @@ export default function Lanyard({
   return (
     <div className="relative z-0 w-full h-full flex justify-center items-center">
       <Canvas
-        frameloop="always"
+        frameloop={tabHidden ? "never" : "always"}
         shadows={false}
         camera={{ position: activePosition, fov: activeFov }}
         dpr={[1, 2]}

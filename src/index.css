@@ -79,6 +79,13 @@ body {
   transform: translateY(0);
 }
 
+/* Momentary layer re-promotion to force Chrome to re-raster the hero
+   headline (e.g. after the fullscreen nav-transition curtain unmounts).
+   Added + removed within a frame — no visual change when healthy. */
+.hero-repaint {
+  will-change: transform;
+}
+
 .theme-dark {
   --color-ink: #ffffff;
   --color-paper: #0d0d0d;
@@ -158,6 +165,38 @@ button:focus-visible {
     0 10px 36px rgba(31, 38, 135, 0.10),
     0 1px 3px rgba(0, 0, 0, 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 0.88);
+}
+
+/* ── Naked-over-hero state — whole nav chrome transparent ──
+   Border kept as transparent (not removed) so toggling never shifts layout. */
+.nav-naked {
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  box-shadow: none;
+  animation: nav-enter 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.nav-naked::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+}
+.nav-naked .nav-pill,
+.theme-dark .nav-naked .nav-pill {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-color: transparent;
+  box-shadow: none;
+}
+.nav-naked .theme-toggle,
+.theme-dark .nav-naked .theme-toggle {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .nav-glass::before {
@@ -356,9 +395,15 @@ button:focus-visible {
 }
 
 .theme-dark .nav-pill-highlight {
-  background: rgba(255, 255, 255, 0.09);
-  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.16);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 14px rgba(0,0,0,0.25);
+}
+
+.theme-dark .nav-naked .nav-pill-highlight {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.10);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 3px 10px rgba(0,0,0,0.2);
 }
 
 .theme-hacker .nav-pill-highlight {
@@ -967,7 +1012,41 @@ button:focus-visible {
   pointer-events: none;
 }
 
-
+/* ── Redesigned toggle (B) — solid ink disc, paper icon, bold invert ──
+   Higher specificity than .theme-dark .theme-toggle so vars win. */
+.theme-toggle.theme-toggle-redesigned,
+.theme-dark .theme-toggle.theme-toggle-redesigned {
+  background: var(--color-ink);
+  border: 1.5px solid var(--color-ink);
+  color: var(--color-paper);
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+@media (hover: hover) and (pointer: fine) {
+  .theme-toggle.theme-toggle-redesigned:hover,
+  .theme-dark .theme-toggle.theme-toggle-redesigned:hover {
+    transform: scale(1.08);
+    background: transparent;
+    border-color: var(--color-ink);
+    color: var(--color-ink);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+  .theme-toggle.theme-toggle-redesigned:hover::after,
+  .theme-dark .theme-toggle.theme-toggle-redesigned:hover::after {
+    opacity: 0;
+  }
+}
+/* Naked-over-hero wins for the disc too (transparent, icon in ink) */
+.nav-naked .theme-toggle.theme-toggle-redesigned,
+.theme-dark .nav-naked .theme-toggle.theme-toggle-redesigned {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--color-ink);
+}
 
 /* ── Custom Scrollbar — minimalist B&W ────────────────── */
 html {
@@ -1316,8 +1395,9 @@ html {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.95),
     inset 0 -1px 0 rgba(255, 255, 255, 0.3),
-    0 4px 14px rgba(31, 38, 135, 0.10),
-    0 1px 4px rgba(0, 0, 0, 0.05);
+    inset 0 0 0 1px rgba(13, 13, 13, 0.08),
+    0 4px 14px rgba(13, 13, 13, 0.10),
+    0 1px 4px rgba(0, 0, 0, 0.08);
   transition:
     transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
     width 0.45s cubic-bezier(0.22, 1, 0.36, 1),
@@ -1337,6 +1417,22 @@ html {
 
 .nav-pill:hover .nav-pill-highlight::after {
   opacity: 1;
+}
+
+/* ── Hero (naked) hover — bold ink wash, clearly visible on studio bg ── */
+.nav-naked .nav-pill-highlight {
+  background: rgba(13, 13, 13, 0.10);
+  border-color: rgba(13, 13, 13, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 4px 14px rgba(13, 13, 13, 0.12),
+    0 1px 4px rgba(0, 0, 0, 0.08);
+}
+.nav-naked .nav-pill-link:hover {
+  color: #0d0d0d;
+}
+.theme-dark .nav-naked .nav-pill-link:hover {
+  color: #ffffff;
 }
 
 .nav-pill-link {

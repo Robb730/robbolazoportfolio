@@ -49,6 +49,45 @@ export default function Hero({ className = "" }) {
 
   
 
+  // Watchdog: Chrome can drop the giant headline raster (e.g. after the
+  // fullscreen nav-transition curtain unmounts) leaving the name blank
+  // until refresh. Self-heal: re-assert hero reveal classes + force the h1
+  // to re-raster when the tab regains visibility and on a slow interval.
+  // Repair-only — never restarts entrance animations, single reflow each.
+  useEffect(() => {
+    const repair = (source) => {
+      try {
+        const section = document.getElementById("top");
+        if (!section) return;
+        let fixed = false;
+        section.querySelectorAll("[data-reveal]:not(.is-visible)").forEach((el) => {
+          el.classList.add("is-visible");
+          fixed = true;
+        });
+        const h1 = section.querySelector("h1");
+        if (h1) {
+          h1.classList.add("hero-repaint");
+          void h1.offsetHeight; // reflow → re-raster
+          setTimeout(() => h1.classList.remove("hero-repaint"), 60);
+        }
+        if (fixed) {
+          try { console.warn(`[hero-watchdog] repaired headline (${source})`); } catch {}
+        }
+      } catch {}
+    };
+    const onVis = () => { if (!document.hidden) repair("visible"); };
+    const onFocus = () => repair("focus");
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", onFocus);
+    const id = setInterval(() => repair("interval"), 30000);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", onFocus);
+      clearInterval(id);
+    };
+  }, []);
+
+
   return (
     <section
       id="top"
@@ -132,32 +171,6 @@ export default function Hero({ className = "" }) {
         >
           Developer crafting thoughtful digital experiences and solutions.
         </p>
-
-        {/* CTAs */}
-        <div
-          data-reveal
-          className="reveal mt-6 md:mt-8 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 w-full sm:w-auto pointer-events-auto"
-          style={{ transitionDelay: "180ms" }}
-        >
-          <a
-            href="#projects"
-            className="hero-btn-primary group inline-flex items-center justify-center gap-2.5 border border-ink bg-ink text-paper px-7 py-3.5 font-medium text-sm transition-all duration-200 hover:bg-paper hover:text-ink"
-          >
-            <span>View Projects</span>
-            <span
-              aria-hidden="true"
-              className="transition-transform duration-200 group-hover:translate-x-1"
-            >
-              →
-            </span>
-          </a>
-          <a
-            href="#contact"
-            className="hero-btn-ghost group inline-flex items-center justify-center gap-2 border border-line bg-paper px-7 py-3.5 font-medium text-sm text-muted transition-all duration-200 hover:border-ink hover:text-ink"
-          >
-            <span>Get in touch</span>
-          </a>
-        </div>
       </div>
 
       {/* Hero Bottom Bar */}
